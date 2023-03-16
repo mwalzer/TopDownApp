@@ -9,6 +9,11 @@ includecmd: yes
 	export PATH=/usr/local/bin/:${PATH}
 
 #===
+%runscript
+#===
+    panel serve panel/topdownvisapp.py
+
+#===
 %files 
 #===
 	panel/topdownvisapp.py /opt/app/topdownvisapp.py

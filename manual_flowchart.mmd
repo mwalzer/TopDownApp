@@ -1,0 +1,35 @@
+---
+title: TopDownApp
+---
+flowchart TD
+    subgraph Browser interface
+    bFiles>File selection]
+    bSpecs>spectra visualisation]
+    bIds>spectra annotation]
+    bExport>result exchange] 
+    end
+    
+    %%pUI --> |raw peak file| p0  
+    %%pUI --> |sequence database| p6
+    
+    subgraph Deconvolution
+    nRAW[ThermoRawFileParser]
+    nDEC[FLASHDeconv]
+    nRAW --> |mzML| nDEC
+    end
+    
+    nX([compatibility layer])
+    nDEC --> |mzML*| nX
+    nX -->|custom| nID 
+
+    subgraph Identification
+    nID[TopPIC]
+    nMZT[mzTab export]
+    nID -->|custom| nMZT
+    end
+
+    bFiles -->|raw| Deconvolution
+    bFiles -->|fasta| Identification
+    nDEC --> bSpecs
+    nID --> bIds
+    nMZT -->|mzTab*| bExport
