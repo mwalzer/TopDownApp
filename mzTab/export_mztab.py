@@ -94,14 +94,13 @@ def extract_peakfile_name(s:str, l:int) -> str:
 @click.option('-s', '--fasta', 'fasta', type=click.Path(exists=True,readable=True),
     required=True, help="The fasta file used from the same single run TopPIC analysis")
 @click.argument('output_filepath', type=click.Path(writable=True) )  # help="The output destination path for the produced mzTab file")
-@click.option('-k', '--h5_prsm', 'h5_prsm', type=click.Path(writable=True),
-    help="The h5 destination path for the produced `_prsms` dataframe")
-@click.option('-l', '--h5_prtf', 'h5_prtf', type=click.Path(writable=True),
-    help="The h5 destination path for the produced `_proteoforms` dataframe")
-def toppic2mztab(prsms_single, proteoforms_single, output_filepath, fasta, h5_prsm, h5_prtf):
+@click.option('-5', '--hdf5', 'h5', type=click.Path(writable=True),
+    help="The hdf5 destination path for the produced hdf5 dataframe (keys: proteoforms and prsms)")
+def toppic2mztab(prsms_single, proteoforms_single, output_filepath, fasta, h5):
     """
     toppic2mztab will export a summary style mzTab from the selected TopPic files and 
-    optionally linked h5 dataframes for further use.
+    optionally linked h5 dataframes for further use. Warning: HDF5 may cause issues 
+    between different versions.
     """
     if not any([prsms_single,proteoforms_single,fasta,output_filepath]):
         print_help()
@@ -231,13 +230,12 @@ def toppic2mztab(prsms_single, proteoforms_single, output_filepath, fasta, h5_pr
         f.write('\n')
         f.write(dfs['prsm_single'].to_csv(sep='\t', index=False))
 
-    if h5_prsm:
-        dfs['prsm_single'].to_hdf(h5_prsm, key='df', mode='w')
+    if h5:
+        dfs['prsm_single'].to_hdf(h5, key='prsms', mode='w')
+        dfs['pro_single'].to_hdf(h5, key='proteoforms', mode='a')
         # read_hdf(h5_prsm, key='df')
-
-    if h5_prtf:  
-        dfs['pro_single'].to_hdf(h5_prsm, key='df', mode='w')
-        # read_hdf(h5_prsm, key='df')
+        # make note that read will work guaranteed only on the same system, different environments may experience issues due protocol
+        # see: https://github.com/DeepLabCut/DLCutils/issues/19 and https://stackoverflow.com/questions/63329657/python-3-7-error-unsupported-pickle-protocol-5
 
 
 if __name__ == '__main__':
