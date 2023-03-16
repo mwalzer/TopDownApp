@@ -1,0 +1,28 @@
+Bootstrap: docker
+From: python:3.10-slim-buster
+
+includecmd: yes
+
+#===
+%environment
+#===
+	#export PATH=/opt/software/bin/:${PATH}
+
+#===
+%post
+#===
+	#URL = none
+
+#---
+# install dependencies
+#---
+	apt update
+	apt install -q --assume-yes wget default-jre
+	pip install --upgrade pip
+	
+#---
+# panel and nextflow
+#---
+	pip install nextflow
+	nextflow info
+	pip install numpy pandas tables scipy panel holoviews alphapept

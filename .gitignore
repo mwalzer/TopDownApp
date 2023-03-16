@@ -1,0 +1,11 @@
+**/.nextflow
+**/work
+**/.nextflow.log*
+**/*.simg
+**/*.mzML
+**/*.gz
+
+.vscode
+.devcontainer
+
+

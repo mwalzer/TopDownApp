@@ -1,0 +1,24 @@
+Bootstrap: docker
+From: python:3.10-slim-buster
+
+includecmd: yes
+%environment
+    export PATH="/opt/thirdparty/LuciPHOr2:/thirdparty/MSGFPlus:/opt/thirdparty/Sirius:/opt/thirdparty/ThermoRawFileParser:/opt/thirdparty/Comet:/opt/thirdparty/Fido:/opt/thirdparty/MaRaCluster:/opt/thirdparty/MyriMatch:/opt/thirdparty/OMSSA:/opt/thirdparty/Percolator:/opt/thirdparty/SpectraST:/opt/thirdparty/XTandem:/opt/thirdparty/crux:${PATH}"
+	export PATH=/opt/flashdeconv/bin/:${PATH}
+	export LD_LIBRARY_PATH=/opt/flashdeconv/lib/:${LD_LIBRARY_PATH}
+	export OPENMS_DATA_PATH=/OpenMS/share/OpenMS
+	
+%post
+	FD_url=https://abibuilder.informatik.uni-tuebingen.de/archive/openms/OpenMSInstaller/experimental/feature/FLASHDeconv/OpenMS-2.7.0-src.tar.gz
+	TP_url=https://github.com/toppic-suite/toppic-suite/archive/refs/tags/v1.5.3.zip
+	
+	# install dependencies
+	apt update
+	apt install -q --assume-yes wget unzip xauth
+	apt install -q --assume-yes build-essential cmake catch autoconf patch libtool git automake vim
+
+	# include
+	TEMP_DEB=$(mktemp  --suffix "*.deb")
+	wget -O $TEMP_DEB https://abibuilder.informatik.uni-tuebingen.de/archive/openms/OpenMSInstaller/experimental/feature/FLASHDeconv/OpenMS-2.7.0-pre-HEAD-2022-03-14-Debian-Linux-x86_64.deb
+	apt install -q --assume-yes -f $TEMP_DEB
+	rm $TEMP_DEB 

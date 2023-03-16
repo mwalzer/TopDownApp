@@ -1,0 +1,110 @@
+Bootstrap: docker
+From: python:3.10-slim-buster
+
+includecmd: yes
+%environment
+    export PATH="/opt/thirdparty/LuciPHOr2:/thirdparty/MSGFPlus:/opt/thirdparty/Sirius:/opt/thirdparty/ThermoRawFileParser:/opt/thirdparty/Comet:/opt/thirdparty/Fido:/opt/thirdparty/MaRaCluster:/opt/thirdparty/MyriMatch:/opt/thirdparty/OMSSA:/opt/thirdparty/Percolator:/opt/thirdparty/SpectraST:/opt/thirdparty/XTandem:/opt/thirdparty/crux:${PATH}"
+	export PATH=/opt/flashdeconv/bin/:${PATH}
+	export LD_LIBRARY_PATH=/opt/flashdeconv/lib/:${LD_LIBRARY_PATH}
+	export OPENMS_DATA_PATH=/OpenMS/share/OpenMS
+	
+%post
+	FD_url=https://abibuilder.informatik.uni-tuebingen.de/archive/openms/OpenMSInstaller/experimental/feature/FLASHDeconv/OpenMS-2.7.0-src.tar.gz
+	TP_url=https://github.com/toppic-suite/toppic-suite/archive/refs/tags/v1.5.3.zip
+	
+	# install dependencies
+	apt update
+	apt install -q --assume-yes wget unzip 
+	apt install -q --assume-yes build-essential cmake catch autoconf patch libtool git automake vim
+	apt install -q --assume-yes zlib1g-dev libxerces-c-dev libboost-filesystem-dev \
+						libboost-program-options-dev libboost-system-dev libboost-thread-dev \
+						libboost-iostreams-dev libboost-chrono-dev libeigen3-dev \
+						nlohmann-json3-dev qtbase5-dev 
+	apt install -q --assume-yes libqt5svg5-dev libqt5opengl5-dev\
+						libeigen3-dev libsqlite3-dev libwildmagic-dev libboost-random-dev \
+                        libboost-regex-dev libboost-iostreams-dev libboost-date-time-dev \
+                        libboost-math-dev libxerces-c-dev libglpk-dev zlib1g-dev libsvm-dev \
+                        libbz2-dev seqan-dev coinor-libcoinmp-dev libhdf5-dev
+	apt install -q --assume-yes xauth
+
+	# get TopPic
+	cd /tmp/
+	TEMP_TP=$(mktemp) 
+	wget -O $TEMP_TP $TP_url &&
+		unzip -d /opt/toppic_src $TEMP_TP &&
+		rm -f $TEMP_TP 
+
+	# build TopPic
+	cd /opt/toppic_src/ &&
+		cd $(ls -d */|head -n 1) &&
+		mkdir build &&
+		cd build &&
+		cmake .. &&
+		make -j$(nproc) &&
+		make install DESTDIR=/opt/toppic
+#TODO add /opt/toppic/toppic/usr/bin/ to $PATH
+
+	#get and build contrib
+	cd /opt/
+	git clone --depth 1 --branch 'Release2.7.0' --single-branch https://github.com/OpenMS/contrib.git
+
+	mkdir contrib-build &&
+		cd contrib-build &&
+		cmake -DBUILD_TYPE=WILDMAGIC ../contrib && rm -rf archives src &&
+		cmake -DBUILD_TYPE=EIGEN ../contrib && rm -rf archives src &&
+		cmake -DBUILD_TYPE=COINOR ../contrib && rm -rf archives src &&
+		cmake -DBUILD_TYPE=SQLITE ../contrib && rm -rf archives src &&
+		rm -rf contrib
+
+	# patch with thirdparty executables
+	cd /opt/ 
+	git clone --depth 1 --branch 'Release2.7.0' --single-branch https://github.com/OpenMS/THIRDPARTY.git
+
+	mkdir thirdparty  &&
+		cp -r THIRDPARTY/All/* /opt/thirdparty/ &&
+		cp -r THIRDPARTY/Linux/64bit/* /opt/thirdparty/ &&
+		rm -rf THIRDPARTY
+	
+	# get FLASHdeconv
+	TEMP_FD=$(mktemp)
+	wget -O $TEMP_FD $FD_url &&
+		mkdir /opt/flashdeconv_src &&
+        tar xf $TEMP_FD -C /opt/flashdeconv_src &&
+        rm -f $TEMP_FD
+		
+	mkdir /opt/flashdeconv && 
+        cd /opt/flashdeconv_src/ &&
+        cd $(ls -d */|head -n 1)
+	cmake -j 2 -DOPENMS_CONTRIB_LIBS="/opt/contrib-build" -DBOOST_USE_STATIC=OFF -DHAS_XSERVER=Off -DWITH_GUI=On -DCMAKE_INSTALL_PREFIX=/opt/flashdeconv . 
+	
+	make TOPP && make UTILS && make TOPPView
+	make install && rm -rf /opt/flashdeconv_src
+
+	# unused
+	#	TEMP_DEB=$(mktemp)
+	#	wget -O $TEMP_DEB https://abibuilder.informatik.uni-tuebingen.de/archive/openms/OpenMSInstaller/experimental/feature/FLASHDeconv/OpenMS-2.7.0-pre-HEAD-2022-03-14-Debian-Linux-x86_64.deb
+	#	dpkg -i $TEMP_DEB 
+
+	# other conveniences
+	#python -m pip install --upgrade pip
+	#pip install fastobo pronto pyvis kaleido plotly jupyterlab numpy pandas  # is there an issue here?!? 
+
+#+ python -m pip install --upgrade pip
+# Traceback (most recent call last):
+#   File "/usr/local/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+#     return _run_code(code, main_globals, None,
+#   File "/usr/local/lib/python3.10/runpy.py", line 86, in _run_code
+#     exec(code, run_globals)
+#   File "/usr/local/lib/python3.10/site-packages/pip/__main__.py", line 9, in <module>
+#     if sys.path[0] in ("", os.getcwd()):
+# FileNotFoundError: [Errno 2] No such file or directory
+
+	# touch README.md
+	# later https://github.com/dtabb73/ProForma-Exporters
+
+#doc material:
+#https://www.toppic.org/software/toppic/tutorial.html
+#https://www.toppic.org/software/toppic/manual.html
+#https://www.openms.de/comp/flashdeconv/#Running_FLASHDeconv_on_command_line
+#https://pawseysc.github.io/singularity-containers/42-x11-gnuplot/index.html
+#singularity exec -B ~/.Xauthority docker://marcodelapierre/gnuplot:5.2.2_4 gnuplot
