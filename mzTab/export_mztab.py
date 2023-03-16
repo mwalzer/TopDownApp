@@ -5,7 +5,34 @@ import click
 from click import command
 import re
 from Bio.SeqIO.FastaIO import SimpleFastaParser
+from os import path
 
+# TODO mzTab header
+# MTD software[1-n]-setting[1-n] ??? 
+# MTD fixed_mod[1] [UNIMOD, UNIMOD:4, Carbamidomethyl, ] ..?
+# MTD variable_mod[1] [UNIMOD, UNIMOD:35, Oxidation, ] ..?
+# do we need full modification-choice flexibility in our app? default var M16 fix - 
+# protein_search_engine_score is E-value too, but no CV?!
+# MTD sample_processing[1-n] ??? 
+header = """
+COM This is the mzTab to a minimal "Summary Top-Down Proteoform Identification Report"  
+MTD mzTab-version   1.0.0 
+MTD mzTab-mode  Summary 
+MTD mzTab-type  Identification 
+MTD title   {filename}
+MTD description TopDown Proteomics experiment, note that PSMs are PrSMs 
+MTD assay[1]-sample_ref sample[1] 
+MTD assay[1]-ms_run_ref ms_run[1] 
+MTD ms_run[1]-location  {filename} 
+MTD ms_run[1]-format    [MS, MS:1000584, mzML file, ] 
+MTD ms_run[1]-id_format [MS, MS:1000776 scan number only nativeID format, ] 
+MTD software[1] [MS, MS:1003145, ThermoRawFileParser, ] 
+MTD software[2] [MS, 1002714, TOPP FLASHDeconv, ]
+MTD software[3] [MS, MS:1002901, TopPIC, ]
+MTD psm_search_engine_score[1]  [MS, MS:1002928, TopPIC:spectral E-value, ]
+MTD psm_search_engine_score[2]  [MS, MS:1002932, TopPIC:MIScore, ]
+MTD protein_search_engine_score[1]  [MS:1002906, search engine specific score for proteoforms,]
+"""
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 INFO = '''
@@ -51,32 +78,13 @@ def strip_seq(s:str) -> str:
     else:
         return rs[0]
 
-# TODO mzTab header
-# MTD software[1-n]-setting[1-n] ??? 
-# MTD fixed_mod[1] [UNIMOD, UNIMOD:4, Carbamidomethyl, ] ..?
-# MTD variable_mod[1] [UNIMOD, UNIMOD:35, Oxidation, ] ..?
-# do we need full modification-choice flexibility in our app? default var M16 fix - 
-# protein_search_engine_score is E-value too, but no CV?!
-# MTD sample_processing[1-n] ??? 
-header = """
-COM This is the mzTab to a minimal "Summary Top-Down Proteoform Identification Report"  
-MTD mzTab-version   1.0.0 
-MTD mzTab-mode  Summary 
-MTD mzTab-type  Identification 
-MTD title   {filename}
-MTD description TopDown Proteomics experiment, note that PSMs are PrSMs 
-MTD assay[1]-sample_ref sample[1] 
-MTD assay[1]-ms_run_ref ms_run[1] 
-MTD ms_run[1]-location  {filename} 
-MTD ms_run[1]-format    [MS, MS:1000584, mzML file, ] 
-MTD ms_run[1]-id_format [MS, MS:1000776 scan number only nativeID format, ] 
-MTD software[1] [MS, MS:1003145, ThermoRawFileParser, ] 
-MTD software[2] [MS, 1002714, TOPP FLASHDeconv, ]
-MTD software[3] [MS, MS:1002901, TopPIC, ]
-MTD psm_search_engine_score[1]  [MS, MS:1002928, TopPIC:spectral E-value, ]
-MTD psm_search_engine_score[2]  [MS, MS:1002932, TopPIC:MIScore, ]
-MTD protein_search_engine_score[1]  [MS:1002906, search engine specific score for proteoforms,]
-"""
+def extract_peakfile_name(s:str, l:int) -> str:
+    ps = pd.read_csv(s, sep='\t', skiprows=1, nrows=l-2, header=None, error_bad_lines=False, warn_bad_lines=False)  # since 1.3 ,on_bad_lines='skip'
+    ps[0] = ps[0].str.strip()
+    ps.set_index(0, inplace=True)
+    pl = ps.to_dict('index')
+    tpfn = pl['Spectrum file:'][1]
+    return path.splitext(path.basename(tpfn))[0] + '.mzML'
 
 @click.command(short_help='toppic2mztab will export a summary style mzTab from the selected TopPic files and optionally linked h5 dataframes for further use.')
 @click.option('-p', '--prsms_single', 'prsms_single', type=click.Path(exists=True,readable=True), 
@@ -86,23 +94,24 @@ MTD protein_search_engine_score[1]  [MS:1002906, search engine specific score fo
 @click.option('-s', '--fasta', 'fasta', type=click.Path(exists=True,readable=True),
     required=True, help="The fasta file used from the same single run TopPIC analysis")
 @click.argument('output_filepath', type=click.Path(writable=True) )  # help="The output destination path for the produced mzTab file")
-@click.option('-n', '--peakfile_name', 'peakfile_name', type=click.STRING,
-    required=True, help="The peakfile name of the same single run TopPIC analysis")
 @click.option('-k', '--h5_prsm', 'h5_prsm', type=click.Path(writable=True),
     help="The h5 destination path for the produced `_prsms` dataframe")
 @click.option('-l', '--h5_prtf', 'h5_prtf', type=click.Path(writable=True),
     help="The h5 destination path for the produced `_proteoforms` dataframe")
-def toppic2mztab(prsms_single, proteoforms_single, output_filepath, peakfile_name, fasta, h5_prsm, h5_prtf):
+def toppic2mztab(prsms_single, proteoforms_single, output_filepath, fasta, h5_prsm, h5_prtf):
     """
     toppic2mztab will export a summary style mzTab from the selected TopPic files and 
     optionally linked h5 dataframes for further use.
     """
-    if not any([prsms_single,proteoforms_single,peakfile_name,fasta,output_filepath]):
+    if not any([prsms_single,proteoforms_single,fasta,output_filepath]):
         print_help()
     try:
         pn = peek_toppic_res_path(prsms_single)
         fn = peek_toppic_res_path(proteoforms_single)
         if pn!=fn:
+            raise(BaseException("Input files appear to be from different runs, aborting!"))
+        peakfile_name = extract_peakfile_name(prsms_single, pn)
+        if peakfile_name!=extract_peakfile_name(proteoforms_single, fn):
             raise(BaseException("Input files appear to be from different runs, aborting!"))
         dfs = {'prsm_single': pd.read_csv(prsms_single, sep='\t', skiprows=pn ), 
                 'pro_single':  pd.read_csv(proteoforms_single, sep='\t', skiprows=fn )}
@@ -213,7 +222,7 @@ def toppic2mztab(prsms_single, proteoforms_single, output_filepath, peakfile_nam
     col_order = ["PSH","sequence"]
     dfs['prsm_single'] = dfs['prsm_single'].reindex(columns=col_order+list((set(dfs['prsm_single'].columns.to_list())- set(col_order))))
 
-    print(INFO.format(n=len(dfs['prsm_single']), m=len(dfs['pro_single'])))
+    print(INFO.format(m=len(dfs['prsm_single']), n=len(dfs['pro_single'])))
 
     with open(output_filepath,'w') as f:
         f.writelines( header.format(filename=peakfile_name) )
@@ -223,11 +232,11 @@ def toppic2mztab(prsms_single, proteoforms_single, output_filepath, peakfile_nam
         f.write(dfs['prsm_single'].to_csv(sep='\t', index=False))
 
     if h5_prsm:
-        dfs['prsm_single'].to_hfd(h5_prsm, key='df', mode='w')
+        dfs['prsm_single'].to_hdf(h5_prsm, key='df', mode='w')
         # read_hdf(h5_prsm, key='df')
 
     if h5_prtf:  
-        dfs['pro_single'].to_hfd(h5_prsm, key='df', mode='w')
+        dfs['pro_single'].to_hdf(h5_prsm, key='df', mode='w')
         # read_hdf(h5_prsm, key='df')
 
 
