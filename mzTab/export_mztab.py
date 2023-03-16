@@ -1,16 +1,41 @@
 import numpy as np
 import pandas as pd
 from datetime import datetime
+import click
+from click import command
+import re
+from Bio.SeqIO.FastaIO import SimpleFastaParser
 
-tmp_file_loc = {
-    'pro_single': 'TopPIC_tutorial/st_2_ms2_toppic_proteoform_single.tsv',
-    'pro': 'TopPIC_tutorial/st_2_ms2_toppic_proteoform.tsv',
-    'prsm_single': 'TopPIC_tutorial/st_2_ms2_toppic_prsm_single.tsv',
-    'prsm': 'TopPIC_tutorial/st_2_ms2_toppic_prsm.tsv'
-}
-tmp_filename = "st_2.mzML"
 
-def peek_toppic_res(file: str) -> int:
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
+INFO = '''
+The selected toppic files has {n} different proteoforms registered, from {m} different PrSMs. 
+'''
+def print_help():
+    """
+    Print the help of the tool
+    :return:
+    """
+    ctx = click.get_current_context()
+    click.echo(ctx.get_help())
+    ctx.exit()
+
+def simpleparse_ncbi_tax(header: str) -> str:
+    m = re.match(".*OX=(\d*) .*",header)
+    if m:
+        return m[1]
+    else:
+        return 'null'
+
+def simpleparse_species(header: str) -> str:
+    m = re.match(".*OS=([\w\s]*) .*",header)
+    if m:
+        return m[1]
+    else:
+        return 'null'
+
+# deprecated with click.File handle use
+def peek_toppic_res_path(file: str) -> int:
     with open(file, 'r') as f:
         lines = f.readlines()
     sl = 0
@@ -19,10 +44,20 @@ def peek_toppic_res(file: str) -> int:
             sl = i+1  # adjust for 0-start
     return sl+1  # add one more for a blank line
 
-dfs_skiprows = {k: peek_toppic_res(v) for k,v in tmp_file_loc.items() }
-l = min(dfs_skiprows.values())
-dfs = {k: pd.read_csv(v, sep='\t', skiprows=l )  for k,v in tmp_file_loc.items() }
+def strip_seq(s:str) -> str: 
+    rs = s.split('.')
+    if len(rs) > 0:
+        return '.'.join(rs[1:-1])  
+    else:
+        return rs[0]
 
+# TODO mzTab header
+# MTD software[1-n]-setting[1-n] ??? 
+# MTD fixed_mod[1] [UNIMOD, UNIMOD:4, Carbamidomethyl, ] ..?
+# MTD variable_mod[1] [UNIMOD, UNIMOD:35, Oxidation, ] ..?
+# do we need full modification-choice flexibility in our app? default var M16 fix - 
+# protein_search_engine_score is E-value too, but no CV?!
+# MTD sample_processing[1-n] ??? 
 header = """
 COM This is the mzTab to a minimal "Summary Top-Down Proteoform Identification Report"  
 MTD mzTab-version   1.0.0 
@@ -43,140 +78,158 @@ MTD psm_search_engine_score[2]  [MS, MS:1002932, TopPIC:MIScore, ]
 MTD protein_search_engine_score[1]  [MS:1002906, search engine specific score for proteoforms,]
 """
 
-# TODO
-# MTD software[1-n]-setting[1-n] ??? 
-# MTD fixed_mod[1] [UNIMOD, UNIMOD:4, Carbamidomethyl, ] ..?
-# MTD variable_mod[1] [UNIMOD, UNIMOD:35, Oxidation, ] ..?
-# do we need full modification-choice flexibility in our app? default var M16 fix - 
-# protein_search_engine_score is E-value too, but no CV?!
-# MTD sample_processing[1-n] ??? 
+@click.command(short_help='toppic2mztab will export a summary style mzTab from the selected TopPic files and optionally linked h5 dataframes for further use.')
+@click.option('-p', '--prsms_single', 'prsms_single', type=click.Path(exists=True,readable=True), 
+    required=True, help="The PrSMs single run file from a single run TopPIC analysis")
+@click.option('-f', '--proteoforms_single', 'proteoforms_single', type=click.Path(exists=True,readable=True),
+    required=True, help="The Proteoforms single run file from a single run TopPIC analysis")
+@click.option('-s', '--fasta', 'fasta', type=click.Path(exists=True,readable=True),
+    required=True, help="The fasta file used from the same single run TopPIC analysis")
+@click.argument('output_filepath', type=click.Path(writable=True) )  # help="The output destination path for the produced mzTab file")
+@click.option('-n', '--peakfile_name', 'peakfile_name', type=click.STRING,
+    required=True, help="The peakfile name of the same single run TopPIC analysis")
+@click.option('-k', '--h5_prsm', 'h5_prsm', type=click.Path(writable=True),
+    help="The h5 destination path for the produced `_prsms` dataframe")
+@click.option('-l', '--h5_prtf', 'h5_prtf', type=click.Path(writable=True),
+    help="The h5 destination path for the produced `_proteoforms` dataframe")
+def toppic2mztab(prsms_single, proteoforms_single, output_filepath, peakfile_name, fasta, h5_prsm, h5_prtf):
+    """
+    toppic2mztab will export a summary style mzTab from the selected TopPic files and 
+    optionally linked h5 dataframes for further use.
+    """
+    if not any([prsms_single,proteoforms_single,peakfile_name,fasta,output_filepath]):
+        print_help()
+    try:
+        pn = peek_toppic_res_path(prsms_single)
+        fn = peek_toppic_res_path(proteoforms_single)
+        if pn!=fn:
+            raise(BaseException("Input files appear to be from different runs, aborting!"))
+        dfs = {'prsm_single': pd.read_csv(prsms_single, sep='\t', skiprows=pn ), 
+                'pro_single':  pd.read_csv(proteoforms_single, sep='\t', skiprows=fn )}
+        try:
+            with open(fasta, 'r') as h:
+                pl = list(SimpleFastaParser(h))
+                db_len = len(pl)
+                db_tax = ','.join(list({simpleparse_ncbi_tax(e[0]) for e in pl}))
+                db_species = ','.join(list({simpleparse_species(e[0]) for e in pl}))
+        except:
+            raise(BaseException("Can't read the fasta file, aborting!"))
+    except Exception as e:
+        click.echo(e)
+        print_help()
 
-#link psm-protein sub-tables how???
-import re
-def simpleparse_ncbi_tax(header: str) -> str:
-    m = re.match(".*OX=(\d*) .*",header)
-    if m:
-        return m[1]
-    else:
-        return 'null'
+    rigged_cols_pr = { 
+        'ambiguity_members': 'null',	
+        'taxid': db_tax,
+        'species': db_species,
+        'database': 'UniProtKB',
+        'database_version': datetime.today().strftime('%Y-%m') + ' (' + str(db_len) + ')',
+        'search_engine': '[MS, MS:1002901, TopPIC, ]',
+        'PRH': 'PRT'
+    }
 
-def simpleparse_species(header: str) -> str:
-    m = re.match(".*OS=([\w\s]*) .*",header)
-    if m:
-        return m[1]
-    else:
-        return 'null'
+    col_map_pr = {
+        'Retention time':'opt_global_RT', 
+        '#peaks':'opt_proteoform_peak_number', 
+        'Charge':'opt_proteoform_charge', 
+        'Protein accession': 'accession', 
+        'Protein description': 'description', 
+        '#unexpected modifications': 'opt_proteoform_unexpected_modifications', 
+        '#variable PTMs': 'modifications', 
+        '#matched peaks': 'opt_proteoform_peaks_matched', 
+        '#matched fragment ions': 'opt_proteoform_fragments_matched', 
+        'E-value': 'best_search_engine_score[1]',
+        'Proteoform': 'opt_proteoform_sequence',
+        'Spectrum ID': 'opt_proteoform_evidence_spectra',
+        'Prsm ID': 'opt_PrSM_ID'
+    }
 
-tmp_db_path = 'TopPIC_tutorial/TopPIC_tutorial_uniprot-st.fasta'
-from Bio.SeqIO.FastaIO import SimpleFastaParser
-with open(tmp_db_path, 'r') as h:
-    pl = list(SimpleFastaParser(h))
-    db_len = len(pl)
-    db_tax = ','.join(list({simpleparse_ncbi_tax(e[0]) for e in pl}))
-    db_species = ','.join(list({simpleparse_species(e[0]) for e in pl}))
+    # TODO spectrum identifier for proteoforms more than one???
+    # TODO PrSM to proteoform rows via spectra ???
+    # TODO modifications
 
-rigged_cols_pr = { 
-    'ambiguity_members': 'null',	
-    'taxid': db_tax,
-    'species': db_species,
-    'database': 'UniProtKB',
-    'database_version': datetime.today().strftime('%Y-%m') + ' (' + str(db_len) + ')',
-    'search_engine': '[MS, MS:1002901, TopPIC, ]',
-    'PRH': 'PRT'
-}
+    dfs['pro_single'].drop(columns=dfs['pro_single'].columns.difference(col_map_pr.keys()), inplace=True)
+    dfs['pro_single'].rename(columns=col_map_pr, errors="raise", inplace=True)
+    dfs['pro_single'] = dfs['pro_single'].join(pd.DataFrame({k:[v]*len(dfs['pro_single']) for k,v in rigged_cols_pr.items()}))
+    dfs['pro_single']["opt_proteoform_sequence"] = dfs['pro_single']["opt_proteoform_sequence"].apply(strip_seq)  
 
-def strip_seq(s:str) -> str: 
-    rs = s.split('.')
-    if len(rs) > 0:
-        rs = '.'.join(rs[1:-1])  
-    else:
-        rs = rs[0]
-    return rs
+    col_order = ["PRH","opt_proteoform_sequence"]
+    dfs['pro_single'] = dfs['pro_single'].reindex(columns=col_order+list((set(dfs['pro_single'].columns.to_list())- set(col_order))))
 
-col_map_pr = {
-    'Retention time':'opt_global_RT', 
-    '#peaks':'opt_proteoform_peak_number', 
-    'Charge':'opt_proteoform_charge', 
-    'Protein accession': 'accession', 
-    'Protein description': 'description', 
-    '#unexpected modifications': 'opt_proteoform_unexpected_modifications', 
-    '#variable PTMs': 'modifications', 
-    '#matched peaks': 'opt_proteoform_peaks_matched', 
-    '#matched fragment ions': 'opt_proteoform_fragments_matched', 
-    'E-value': 'best_search_engine_score[1]',
-    'Proteoform': 'opt_proteoform_sequence',
-    'Spectrum ID': 'opt_proteoform_evidence_spectra',
-    'Prsm ID': 'opt_PrSM_ID'
-}
+    rigged_cols_sm = { 
+        'database': 'UniProtKB',
+        'database_version': datetime.today().strftime('%Y-%m') + ' (' + str(db_len) + ')',
+        'search_engine': '[MS, MS:1002901, TopPIC, ]',
+        'PSH': 'PSM',
+        'unique':  False,
+    }
 
-# TODO spectrum identifier for proteoforms more than one???
-# TODO PrSM to proteoform rows via spectra ???
-# TODO modifications
+    # TODO modifications
+    # TODO document PSM_ID == PrSM_ID in MTD
+    # TODO scan or spectrum id? also value = ms_run[1-n]:{SPECTRA_REF}
+    # TODO '#variable PTMs' == 'modifications' not as specification states number of all mods, could combine with #unexpected modifications
 
-dfs['pro_single'].drop(columns=dfs['pro_single'].columns.difference(col_map_pr.keys()), inplace=True)
-dfs['pro_single'].rename(columns=col_map_pr, errors="raise", inplace=True)
-dfs['pro_single'] = dfs['pro_single'].join(pd.DataFrame({k:[v]*len(dfs['pro_single']) for k,v in rigged_cols_pr.items()}))
-dfs['pro_single']["opt_proteoform_sequence"] = dfs['pro_single']["opt_proteoform_sequence"].apply(strip_seq)  
+    col_map_sm = {
+        'Retention time':'retention_time', 
+        'Proteoform': 'sequence',
+        'Prsm ID': 'PSM_ID',
+        'E-value': 'search_engine_score[1]',
+        'MIScore': 'search_engine_score[2]',
+        'Protein accession': 'accession', 
+        'First residue': 'start',
+        'Last residue': 'end',
+        '#variable PTMs': 'modifications', 
+        'Scan(s)': 'spectra_ref',
+        '#peaks':'opt_prsm_peak_number', 
+        'Charge':'charge', 
+        'Precursor mass': 'opt_prsm_precursormass', 
+        'Adjusted precursor mass': 'opt_prsm_adj_precursormass', 
+        '#unexpected modifications': 'opt_prsm_unexpected_modifications', 
+        '#matched peaks': 'opt_prsm_peaks_matched', 
+        '#matched fragment ions': 'opt_prsm_fragments_matched', 
+    }
 
-col_order = ["PRH","opt_proteoform_sequence"]
-dfs['pro_single'] = dfs['pro_single'].reindex(columns=col_order+list((set(dfs['pro_single'].columns.to_list())- set(col_order))))
+    massaged_cols = {
+        'pre': dfs['prsm_single']['Proteoform'].str.extract(r'^(\w)\.').replace(np.nan,'-'),
+        'post': dfs['prsm_single']['Proteoform'].str.extract(r'.*\.(\w*)$').replace('','-')
+    }
 
-rigged_cols_sm = { 
-    'database': 'UniProtKB',
-    'database_version': datetime.today().strftime('%Y-%m') + ' (' + str(db_len) + ')',
-    'search_engine': '[MS, MS:1002901, TopPIC, ]',
-    'PSH': 'PSM',
-    'unique':  False,
-}
+    #sequence col before renaming!
+    dfs['prsm_single']["Proteoform"] = dfs['prsm_single']["Proteoform"].apply(strip_seq)  
 
-# TODO modifications
-# TODO document PSM_ID == PrSM_ID in MTD
-# TODO scan or spectrum id? also value = ms_run[1-n]:{SPECTRA_REF}
+    # TODO what to do with:
+    # exp_mass_to_charge
+    # calc_mass_to_charge
+    # link psm-protein sub-tables how???
 
-col_map_sm = {
-    'Retention time':'retention_time', 
-    'Proteoform': 'sequence',
-    'Prsm ID': 'PSM_ID',
-    'E-value': 'search_engine_score[1]',
-    'MIScore': 'search_engine_score[2]',
-    'Protein accession': 'accession', 
-    'First residue': 'start',
-    'Last residue': 'end',
-    '#variable PTMs': 'modifications', 
-    'Scan(s)': 'spectra_ref',
-    '#peaks':'opt_prsm_peak_number', 
-    'Charge':'charge', 
-    'Precursor mass': 'opt_prsm_precursormass', 
-    'Adjusted precursor mass': 'opt_prsm_adj_precursormass', 
-    '#unexpected modifications': 'opt_prsm_unexpected_modifications', 
-    '#matched peaks': 'opt_prsm_peaks_matched', 
-    '#matched fragment ions': 'opt_prsm_fragments_matched', 
-}
+    dfs['prsm_single'].drop(columns=dfs['prsm_single'].columns.difference(col_map_sm.keys()), inplace=True)
+    dfs['prsm_single'].rename(columns=col_map_sm, errors="raise", inplace=True)
+    dfs['prsm_single'] = dfs['prsm_single'].join(
+        pd.DataFrame({k:[v]*len(dfs['prsm_single']) for k,v in rigged_cols_sm.items()})
+    )
+    for k,v in massaged_cols.items():
+        dfs['prsm_single'][k] = v
+    # dfs['prsm_single']["sequence"] = dfs['prsm_single']["sequence"].apply(strip_seq)  
+    col_order = ["PSH","sequence"]
+    dfs['prsm_single'] = dfs['prsm_single'].reindex(columns=col_order+list((set(dfs['prsm_single'].columns.to_list())- set(col_order))))
 
-massaged_cols = {
-    'pre': dfs['prsm_single']['Proteoform'].str.extract(r'^(\w)\.').replace(np.nan,'-'),
-    'post': dfs['prsm_single']['Proteoform'].str.extract(r'.*\.(\w*)$').replace('','-')
-}
+    print(INFO.format(n=len(dfs['prsm_single']), m=len(dfs['pro_single'])))
 
-# TODO what to do with:
-# exp_mass_to_charge
-# calc_mass_to_charge
+    with open(output_filepath,'w') as f:
+        f.writelines( header.format(filename=peakfile_name) )
+        f.write('\n')
+        f.write(dfs['pro_single'].to_csv(sep='\t', index=False))
+        f.write('\n')
+        f.write(dfs['prsm_single'].to_csv(sep='\t', index=False))
 
-dfs['prsm_single'].drop(columns=dfs['prsm_single'].columns.difference(col_map_sm.keys()), inplace=True)
-dfs['prsm_single'].rename(columns=col_map_sm, errors="raise", inplace=True)
-dfs['prsm_single'] = dfs['prsm_single'].join(
-    pd.DataFrame({k:[v]*len(dfs['prsm_single']) for k,v in rigged_cols_sm.items()})
-)
-for k,v in massaged_cols.items():
-    dfs['prsm_single'][k] = v
-# dfs['prsm_single']["sequence"] = dfs['prsm_single']["sequence"].apply(strip_seq)  
-col_order = ["PSH","sequence"]
-dfs['prsm_single'] = dfs['prsm_single'].reindex(columns=col_order+list((set(dfs['prsm_single'].columns.to_list())- set(col_order))))
+    if h5_prsm:
+        dfs['prsm_single'].to_hfd(h5_prsm, key='df', mode='w')
+        # read_hdf(h5_prsm, key='df')
+
+    if h5_prtf:  
+        dfs['pro_single'].to_hfd(h5_prsm, key='df', mode='w')
+        # read_hdf(h5_prsm, key='df')
 
 
-with open('/tmp/test.mzTab','w') as f:
-    f.writelines( header.format(filename='file://tmp/st_2.mzML') )
-    f.write('\n')
-    f.write(dfs['pro_single'].to_csv(sep='\t', index=False))
-    f.write('\n')
-    f.write(dfs['prsm_single'].to_csv(sep='\t', index=False))
+if __name__ == '__main__':
+    toppic2mztab()

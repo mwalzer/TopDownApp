@@ -123,18 +123,43 @@ process TopPIC{
 	// the tiniest issue with the feature file will make toppic dump core (say, like the ms1 features are contained in there too ...)
 
     output:
-    file "*.tsv" into id_channel
-    
-    // does toppic -c combined proteins.fasta make sense???
+    file "*_proteoform_single.tsv" into id_prtf_channel
+    file "*_prsm_single.tsv" into id_prsm_channel
  
     script:
     """
-	echo USING INPUTS
-	echo $msalign_file
-	echo $msfeat_file
     toppic -d -t FDR -T FDR -u 2 -g -i ${params.mods} ${params.fasta} $msalign_file
     """
 	// unless both file variables are mentioned and used the files don't get staged 
 }
+
+/*
+ * Export TopPIC results to mzTab
+ */
+process mzTab{
+    //container '/home/walzer/ms-tools/TopDown/topdown-tools:feb23.simg'
+    memory { 4.GB * task.attempt }
+    
+    publishDir "${params.outdir}", mode: 'copy', overwrite: true
+    // errorStrategy { assert task.errorMessage ==~ 'Centroided data provided but profile spectra expected' ? 'ignore' : 'retry' }  //errorReport???
+    // errorStrategy 'ignore'
+    errorStrategy 'retry'
+ 
+    input:
+    file proteoform_ids from id_prtf_channel.flatten()
+    file prsm_ids from id_prsm_channel.flatten()
+    
+    output:
+	file "*.mzTab" into mztab_channel
+    file "*.h5" into df_channel
+
+    //needs v4 of export_mztab
+    script:
+    """
+    python3 /opt/app/export_mztab.py -s ${params.fasta} -p ${prsm_ids} -f ${proteoform_ids} -5 ${prsm_ids.baseName}.h5 ${prsm_ids.baseName}.mzTab
+	"""
+}
+
+
 
 
