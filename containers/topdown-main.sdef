@@ -1,5 +1,5 @@
 Bootstrap: localimage
-From: containers/topdown-tools:feb23.simg
+From: containers/topdown-tools:mar23.simg
 
 includecmd: yes
 
@@ -20,15 +20,15 @@ includecmd: yes
 	panel/requirements.txt /opt/app/requirements.txt
 	panel/panel_plot_utils.py /opt/app/panel_plot_utils.py
 	panel/ms_io_utils.py /opt/app/ms_io_utils.py
-	workflow/topdown_local_v2.nf /opt/app/wf/topdown_local_v2.nf
+	workflow/topdown_local.nf /opt/app/wf/topdown_local_v2.nf
 	workflow/nf.config /opt/app/wf/nf.config
-	data/common_mods_OxMethPhos.txt /opt/app/modconf/common_mods_OxMethPhos.txt
-	data/common_mods_OxMethAcetPhos.txt /opt/app/modconf/common_mods_OxMethAcetPhos.txt
-	data/common_mods_OxMethAcet.txt /opt/app/modconf/common_mods_OxMethAcet.txt
-	data/common_mods_OxMeth.txt /opt/app/modconf/common_mods_OxMeth.txt
-	data/common_mods_Ox.txt /opt/app/modconf/common_mods_Ox.txt
-	data/common_mods_Meth.txt /opt/app/modconf/common_mods_Meth.txt
-	mzTab/export_mztab_v4.py /opt/app/export_mztab.py
+	config/common_mods_OxMethPhos.txt /opt/app/modconf/common_mods_OxMethPhos.txt
+	config/common_mods_OxMethAcetPhos.txt /opt/app/modconf/common_mods_OxMethAcetPhos.txt
+	config/common_mods_OxMethAcet.txt /opt/app/modconf/common_mods_OxMethAcet.txt
+	config/common_mods_OxMeth.txt /opt/app/modconf/common_mods_OxMeth.txt
+	config/common_mods_Ox.txt /opt/app/modconf/common_mods_Ox.txt
+	config/common_mods_Meth.txt /opt/app/modconf/common_mods_Meth.txt
+	mzTab/export_mztab.py /opt/app/export_mztab.py
 #===
 %post
 #===
@@ -46,6 +46,7 @@ includecmd: yes
 	pip install nextflow
 	nextflow info
 	python -m pip install -r /opt/app/requirements.txt  # all reqs for tools used in wf and from the app
+	nextflow -v
 	
 #---
 # install dependencies

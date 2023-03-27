@@ -15,7 +15,7 @@ includecmd: yes
 #===
 %files 
 #===
-	mzTab/export_mztab_v4.py /opt/app/export_mztab.py
+	mzTab/export_mztab.py /opt/app/export_mztab.py
 	
 #===
 %post
@@ -27,6 +27,19 @@ FD_url=https://abibuilder.informatik.uni-tuebingen.de/archive/openms/OpenMSInsta
 #---
 # install dependencies
 #---
+	#echo 'deb https://cdn-fastly.deb.debian.org/debian stable main' >> /etc/apt/sources.list
+	#echo 'deb https://cdn-fastly.deb.debian.org/debian-security stable/updates main' >> /etc/apt/sources.list
+	#echo 'deb https://deb.debian.org/debian unstable main' > /etc/apt/sources.list
+	#echo 'deb https://deb.debian.org/debian-debug unstable-debug main' >> /etc/apt/sources.list
+	#echo 'deb https://deb.debian.org/debian-ports unstable main' >> /etc/apt/sources.list
+	
+	#apt-key adv --keyserver keyserver.ubuntu.com --recv-keys B523E5F3FC4E5F2C 
+	#apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8D69674688B6CB36
+	#E: gnupg, gnupg2 and gnupg1 do not seem to be installed, but one of them is required for this operation
+
+	sed -i 's|http|https|g' /etc/apt/sources.list
+	cat /etc/apt/sources.list
+
 	apt update
 	apt install -q --assume-yes wget unzip 
 	apt install -q --assume-yes build-essential catch autoconf patch libtool git automake vim
@@ -52,7 +65,7 @@ FD_url=https://abibuilder.informatik.uni-tuebingen.de/archive/openms/OpenMSInsta
 #---
 # cmake
 #---
-	wget http://www.cmake.org/files/v3.25/cmake-3.25.2.tar.gz
+	wget https://www.cmake.org/files/v3.25/cmake-3.25.2.tar.gz
 	tar xf cmake-3.25.2.tar.gz
 	cd cmake-3.25.2
 	./bootstrap
