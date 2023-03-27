@@ -26,6 +26,12 @@ class WorkflowResults:
     id_dfs: dict = field(default_factory=dict)
     id_mztabpath: str = ""
 
+# font_url="https://fonts.googleapis.com/css?family=Open+Sans"
+# # template=pn.template.FastListTemplate(font_url="https://fonts.googleapis.com/css?family=Open+Sans")
+# # TypeError: 'FastListTemplate' object is not callable
+# print(pn.template.FastListTemplate.font_url)
+# pn.template.FastListTemplate.font_url = font_url
+
 pn.extension(loading_spinner='dots', 
     loading_color='#4d8060', 
     sizing_mode="stretch_width", 
@@ -33,6 +39,10 @@ pn.extension(loading_spinner='dots',
     theme='default',
     # theme_toggle=False,  # ?! AttributeError: 'theme_toggle' is not a valid config parameter.
 )
+
+# pn.template.FastListTemplate.font_url = font_url
+# print(pn.template.FastListTemplate.font_url)
+
 pd.set_option("display.precision", 0)
 hv.extension('matplotlib')  # https://panel.holoviz.org/reference/panes/HoloViews.html#switching-backends
 
@@ -167,7 +177,7 @@ def update_peak_tbl(sidx):
         })
         # reset peak selected and plotted
         peak_name.object= "No peak selected."
-        result_panel[6] = ppu.plot_3d_spectrum(None, None, [], {})
+        result_panel[0][2] = ppu.plot_3d_spectrum(None, None, [], {})
 
 
 def spec_detail_msg(sidx,ssidx):
@@ -180,12 +190,12 @@ def update_spec_fig(sidx):
     global result_panel
     # print('update_spec_fig', sidx) 
 
-    with pn.param.set_values(result_panel[3], loading=True):
+    with pn.param.set_values(result_panel[1][3], loading=True):
         spectra_fig = ppu.plot_2d_spectra(sidx, 
             workflow_result_store.annot_spectra, 
             workflow_result_store.deconv_spectra)
-        result_panel[3] = spectra_fig
-        #TODO replace result_panel[3] (2d) with named element replace with .object?
+        result_panel[1][3] = spectra_fig
+        #TODO replace result_panel[N] (2d) with named element replace with .object?
 
 default_fipm = """You still need: 
 1. a fasta file as identification sequences basis
@@ -211,7 +221,7 @@ mztab_button = pn.widgets.Button(name='download mzTab', width=50, disabled=True)
 
 spectra_tbl = pn.widgets.Tabulator(
         pd.DataFrame({},columns=['MS level', 'Scan', 'RT', '# peaks']), 
-        height=200,
+        height=400,
         disabled=True,
     )
 
@@ -236,7 +246,7 @@ peak_name = pn.pane.Markdown(object="No peak selected.")
 
 def peak_tbl_click(*events):
     global result_panel
-    rpp = result_panel[6]
+    rpp = result_panel[0][2]
     event = events[-1]
     # print('peak_tbl_click', event.row, current_spec_idx) 
     peak_name.object = peak_detail_msg(event.row,current_spec_idx)
@@ -247,8 +257,8 @@ def peak_tbl_click(*events):
             vis_dict=workflow_result_store.vis_dict,
             deconv_spectra=workflow_result_store.deconv_spectra)
         rpp = spectra_fig
-        result_panel[6] = rpp
-        #TODO replace result_panel[6] (3d) with named element replace with .object?
+        result_panel[0][2] = rpp
+        #TODO replace result_panel[M] (3d) with named element replace with .object?
 
 peak_tbl.on_click(peak_tbl_click) 
 
@@ -280,16 +290,24 @@ input_panel = pn.Column(
     sizing_mode='stretch_width',
 ).servable(target='main')
 
-result_panel = pn.Column(
-    pn.Row('# Result stuffs'),
+col_right = pn.Column(
+    pn.Row('### Spectrum Details'),
     pn.Row(resultoverview),
     pn.Row(spectra_name),
     pn.Row(ppu.plot_2d_spectra(None, [], [])),
     pn.Row(peak_tbl),
+
+)
+col_left = pn.Column(
+    pn.Row('### Deconvolved Peaks'),
     pn.Row(peak_name),
     pn.Row(ppu.plot_3d_spectrum(None, None, [], {})),
     pn.Row('### Identified PrSM'),
     pn.Row(id_tbl),
+)
+result_panel = pn.Row(
+    col_left,
+    col_right,
     visible = False,
 ).servable(target='main')
 

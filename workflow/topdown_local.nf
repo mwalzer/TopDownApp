@@ -10,9 +10,9 @@ nextflow.enable.dsl = 1
 -----
 Pipeline overview:
 1. Mzml conversion
-2. Apply deconv
+2. Apply deconvolution
 3. Use search engine 
-4. outputs - original tsvs and a mzTab 
+4. Output - original analysis tsvs and a mzTab 
 -----
 To-Dos:
 (nice to have: flashIDA for data producers - for users that do their own data acquisition)
@@ -23,7 +23,7 @@ To-Dos:
  */
 params.raw_file = params.raw_file ?: { log.error "No raw file provided. Make sure you have used the '--raw_file' option."; exit 1 }()
 params.fasta = params.fasta ?: { log.error "No fasta file provided. Make sure you have used the '--fasta' option."; exit 1 }()
-params.mods = params.mods ?: { log.error "No mods file provided. Make sure you have used the '--fasta' option."; exit 1 }()
+params.mods = params.mods ?: { log.error "No mods file provided. Make sure you have used the '--mods' option."; exit 1 }()
 
 //params.raw_file = params.raw_file ?: { log.error "No raw file provided. Make sure you have used the '--raw_file' option."; return "/home/walzer/ms-tools/TopDown/TopPIC_tutorial/st_2.raw" }()
 //params.fasta = "/home/walzer/ms-tools/TopDown/TopPIC_tutorial/TopPIC_tutorial_uniprot-st.fasta"
@@ -72,7 +72,7 @@ process ConvertRaw {
 }
 
 process FLASHDeconv{
-    //container '/home/walzer/ms-tools/TopDown/topdown-tools:feb23.simg'
+    //container '/home/walzer/ms-tools/TopDown/topdown-tools:mar23.simg'
     memory { 4.GB * task.attempt }
     publishDir "${params.outdir}", mode: 'copy', overwrite: true
  
@@ -109,7 +109,7 @@ process FLASHDeconv{
  * 	         this node needs to do seemingly superfluous steps
  */
 process TopPIC{
-    //container '/home/walzer/ms-tools/TopDown/topdown-tools:feb23.simg'
+    //container '/home/walzer/ms-tools/TopDown/topdown-tools:mar23.simg'
     memory { 4.GB * task.attempt }
     
     publishDir "${params.outdir}", mode: 'copy', overwrite: true
@@ -137,7 +137,7 @@ process TopPIC{
  * Export TopPIC results to mzTab
  */
 process mzTab{
-    //container '/home/walzer/ms-tools/TopDown/topdown-tools:feb23.simg'
+    // container '/home/walzer/ms-tools/TopDown/topdown-tools:mar23.simg'
     memory { 4.GB * task.attempt }
     
     publishDir "${params.outdir}", mode: 'copy', overwrite: true
