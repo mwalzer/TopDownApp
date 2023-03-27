@@ -20,7 +20,7 @@ includecmd: yes
 	panel/requirements.txt /opt/app/requirements.txt
 	panel/panel_plot_utils.py /opt/app/panel_plot_utils.py
 	panel/ms_io_utils.py /opt/app/ms_io_utils.py
-	workflow/topdown_local.nf /opt/app/wf/topdown_local_v2.nf
+	workflow/topdown_local.nf /opt/app/wf/topdown_local.nf
 	workflow/nf.config /opt/app/wf/nf.config
 	config/common_mods_OxMethPhos.txt /opt/app/modconf/common_mods_OxMethPhos.txt
 	config/common_mods_OxMethAcetPhos.txt /opt/app/modconf/common_mods_OxMethAcetPhos.txt

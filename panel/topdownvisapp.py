@@ -145,7 +145,7 @@ def trigger_wf_func(event):
     print("Analysing data")
     # TODO move hardcode-paths to config
     analysis_pipeline = nextflow.Pipeline(
-        "/opt/app/wf/topdown_local_v2.nf", 
+        "/opt/app/wf/topdown_local.nf", 
         config="/opt/app/wf/nf.config"
     )
 
