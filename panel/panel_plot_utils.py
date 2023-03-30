@@ -17,8 +17,8 @@ def plot_2d_spectra(sidx, annot_spectra, deconv_spectra):
     fig_s = fig_o.opts(aspect=3, padding=0.1) + fig_d.opts(aspect=3, padding=0.1)
     fig_s.opts(aspect_weight=True, tight=False, fig_inches=300, fig_size=3).cols(1)
     return fig_s
-  spectrum = deconv_spectra[sidx]
-  ori_spectrum = annot_spectra[sidx]
+  spectrum = list(deconv_spectra.values())[sidx]
+  ori_spectrum = annot_spectra[spectrum['id']]
   peak_coord = pd.DataFrame(np.concatenate([spectrum["m/z array"][np.newaxis].T, spectrum["intensity array"][np.newaxis].T], axis=1), columns = ['mass','intensity'])
   fig_d = hv.Spikes(peak_coord).opts(color='green', title="Deconvolved Spectrum {}".format(spectrum["id"]))
   peak_coord = pd.DataFrame(np.concatenate([ori_spectrum["m/z array"][np.newaxis].T, ori_spectrum["intensity array"][np.newaxis].T], axis=1), columns = ['m/z','intensity'])
@@ -52,7 +52,7 @@ def plot_peak_map(spectra):
     fig_map.opts(xlim=(0,100), ylim=(100,2000), cmap=palette)
     return fig_map.hist(dimension='y',weight_dimension='x_y z2',num_bins = 2000,normed=True)
 
-# Remove margins in 3D plots
+# Remove margins in matplotlib 3D plots
 # https://stackoverflow.com/a/42648316/3319796
 def _get_coord_info_new(self, renderer):
     mins, maxs, cs, deltas, tc, highs = self._get_coord_info_old(renderer)
@@ -81,9 +81,9 @@ def plot_3d_spectrum(pidx, sidx, deconv_spectra, vis_dict):
   if sidx not in range(0,len(deconv_spectra)): 
     return dummy_3d_fig()
 
-  spectrum = deconv_spectra[sidx]
+  spectrum = list(deconv_spectra.values())[sidx]
   target_matches = vis_dict[spectrum['id']]
-  print("sidx=",sidx,':',spectrum['id'], len(vis_dict[spectrum['id']]))
+  # print(target_matches)
 
   #each peak has its matches, choice comes through pidx
   choice_peak_matches = list(filter(lambda t: t.peak_index==pidx, target_matches))
@@ -92,11 +92,8 @@ def plot_3d_spectrum(pidx, sidx, deconv_spectra, vis_dict):
     return dummy_3d_fig()
 
   choice_peak_mass = choice_peak_matches[-1].mass
-  print("pidx=",pidx,':',choice_peak_matches[-1].mass)
 
   plot_title = ' '.join([spectrum["id"].split(' ')[-1], 'precursor mass=', str(choice_peak_mass), 'selected peak index=', str(pidx)])
-
-  avrgn_masses, avrgn_ints = mass_to_dist(choice_peak_mass, averagine_aa, averagine_iso)
 
   #for each charge there is an element in target_matches with resp. peak index that now gets formed into vis_peaks
   vis_peaks = list()
@@ -107,27 +104,34 @@ def plot_3d_spectrum(pidx, sidx, deconv_spectra, vis_dict):
           'type': 'noise' if t.isotope_matches[idx]<0 else 'isomatch'}
       )
   
-  maxi = max([0]+[max(t.intensity_matches) for t in choice_peak_matches if len(t.intensity_matches)])
-  print("maximum intensity in matching peaks=",maxi)
-  
+  maxi = max([0]+[max(t.intensity_matches) for t in choice_peak_matches if len(t.intensity_matches)])  
   maxi = max(maxi,1)
-  paths = [p[('x', 'y', 'z')] for p in vis_peaks if ('x', 'y', 'z') in p]  
-  print("matching peaks (c,m,i) =",[p[1] for p in paths])
-  print("charges with matches =",[isoc.charge for isoc in choice_peak_matches if isoc.mass_matches.size>0])
+  maxz = max([0]+[isoc.charge for isoc in choice_peak_matches if isoc.mass_matches.size>0])
+  maxz = max(maxz,3)
+  # print("max",maxz,maxi)
+
+  avrgn_masses, avrgn_ints = mass_to_dist(choice_peak_mass, averagine_aa, averagine_iso)
+  # print("avrgn", avrgn_masses, avrgn_ints)
 
   #for each charge there is also the averagine model peaks for the selected peak's precursor_mass 
   # which we collected in averagine_peaks with intensities 
   averagine_peaks = list() 
   for c in [isoc.charge for isoc in choice_peak_matches if isoc.mass_matches.size>0]:
     # c size of avrgn_masses zip avrgn_ints
-    for m,i in zip(avrgn_masses, avrgn_ints):
-      averagine_peaks.append(
-          {('x', 'y', 'z'): [[c, m, i*maxi] for m,i in zip(avrgn_masses, avrgn_ints)]}
-      )
+    averagine_peaks.append(
+        {('x', 'y', 'z'): [[c, m, i*maxi] for m,i in zip(avrgn_masses, avrgn_ints)]}
+    )
 
-  fig = hv.Path3D(vis_peaks, vdims='type').opts(color="blue", azimuth=40, elevation=20)
+  # print("peaks", len(vis_peaks), len(averagine_peaks))
+  if not vis_peaks: 
+    return dummy_3d_fig()
+
+  explicit_cmapping = {'noise': 'lightcoral', 'isomatch':'mediumblue'}  # https://holoviews.org/user_guide/Styling_Plots.html
+  fig = hv.Path3D(vis_peaks, vdims='type').opts(azimuth=40, elevation=20)\
+    .opts(color='type', cmap=explicit_cmapping)\
+    .opts(xlim=(0,maxz+1),xticks=list(range(0,maxz+1)))
   # fog = hv.Scatter3D(iso_traces).opts(c='grey', s=.1, azimuth=40, elevation=20, alpha=0.1)
-  fug = hv.Path3D(averagine_peaks).opts(color='grey', linewidth=.2, azimuth=40, elevation=20, alpha=0.1)
+  fug = hv.Path3D(averagine_peaks).opts(color='grey', linewidth=.2, azimuth=40, elevation=20)#, alpha=0.1
   fig_fin = (fug*fig).opts(
               ylabel="Mass",
               xlabel="Charge",
