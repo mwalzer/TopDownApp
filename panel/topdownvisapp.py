@@ -19,8 +19,8 @@ class AppInputs:
 @dataclass
 class WorkflowResults:
     run_name: str = "N/A"
-    deconv_spectra: list = field(default_factory=list)
-    annot_spectra: list = field(default_factory=list)
+    deconv_spectra: dict = field(default_factory=dict)
+    annot_spectra: dict = field(default_factory=dict)
     vis_dict: dict = field(default_factory=dict)
     deconv_spectra_df:pd.DataFrame = pd.DataFrame()
     id_dfs: dict = field(default_factory=dict)
@@ -121,15 +121,16 @@ def update_resultoverview():
         embed=False, name="(Right-click using 'Save as' dialog)"
     )
     sidebar[1] = mztab_button
-    id_tbl.value = workflow_result_store.id_dfs['prsms']
+    id_tbl.value = workflow_result_store.id_dfs['prsms'][['sequence','search_engine_score[2]','search_engine','charge','accession', 'opt_prsm_precursormass','opt_prsm_fragments_matched','spectra_ref']]
+
 
 def update_spectra_tbl():
     spec_df = pd.DataFrame({
         # 'Idx': [s['index'] for s in workflow_result_store.deconv_spectra],
-        'MS level': [s['ms level'] for s in workflow_result_store.deconv_spectra],
-        'Scan': [s['id'] for s in workflow_result_store.deconv_spectra],
-        'RT': [s['scanList']['scan'][0]['scan start time'] for s in workflow_result_store.deconv_spectra],
-        '# peaks': [len(s['intensity array']) for s in workflow_result_store.deconv_spectra],
+        'MS level': [s['ms level'] for s in workflow_result_store.deconv_spectra.values()],
+        'Scan': [s['id'] for s in workflow_result_store.deconv_spectra.values()],
+        'RT': [s['scanList']['scan'][0]['scan start time'] for s in workflow_result_store.deconv_spectra.values()],
+        '# peaks': [len(s['intensity array']) for s in workflow_result_store.deconv_spectra.values()],
     }) #columns=['MS level', 'Scan', 'RT', '# peaks'])
     spec_df.Scan = spec_df.Scan.str.extract(r'scan=(\d+)')
     spectra_tbl.value = spec_df
@@ -169,16 +170,15 @@ def update_peak_tbl(sidx):
     with pn.param.set_values(peak_tbl, loading=True):
         ssidx = spectra_tbl.value.Scan.iloc[sidx]
         spectra_name.object = spec_detail_msg(sidx,ssidx)
-        sidx_sst = workflow_result_store.deconv_spectra[sidx]['scanList']['scan'][0]['scan start time']
+        sidx_sst = list(workflow_result_store.deconv_spectra.values())[sidx]['scanList']['scan'][0]['scan start time']
         peak_tbl.value = pd.DataFrame({
-            'RT': [sidx_sst]*len(workflow_result_store.deconv_spectra[sidx]['intensity array']),
-            'Mass': workflow_result_store.deconv_spectra[sidx]['m/z array'],
-            'Intensity': workflow_result_store.deconv_spectra[sidx]['intensity array'],
+            'RT': [sidx_sst]*len(list(workflow_result_store.deconv_spectra.values())[sidx]['intensity array']),
+            'Mass': list(workflow_result_store.deconv_spectra.values())[sidx]['m/z array'],
+            'Intensity': list(workflow_result_store.deconv_spectra.values())[sidx]['intensity array'],
         })
         # reset peak selected and plotted
         peak_name.object= "No peak selected."
         result_panel[0][2] = ppu.plot_3d_spectrum(None, None, [], {})
-
 
 def spec_detail_msg(sidx,ssidx):
     return f"""Selected spectrum: index **{sidx}** (scan={ssidx})."""
@@ -296,7 +296,7 @@ col_right = pn.Column(
     pn.Row(spectra_name),
     pn.Row(ppu.plot_2d_spectra(None, [], [])),
     pn.Row(peak_tbl),
-
+    width=300
 )
 col_left = pn.Column(
     pn.Row('### Deconvolved Peaks'),
@@ -304,6 +304,7 @@ col_left = pn.Column(
     pn.Row(ppu.plot_3d_spectrum(None, None, [], {})),
     pn.Row('### Identified PrSM'),
     pn.Row(id_tbl),
+    width=700
 )
 result_panel = pn.Row(
     col_left,

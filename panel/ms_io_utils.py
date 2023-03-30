@@ -1,4 +1,6 @@
 import os
+import re
+import itertools
 import numpy as np
 import pandas as pd
 from pyteomics import mzml
@@ -45,6 +47,13 @@ def parse_deconv_spectra_meta(spectrum: Dict[str,Any]) -> SpecRef:
                     chargerangelimits,isotoperangelimits)
   return specref
 
+def parse_source_spectra_meta(source_spectrum):
+  par = [re.split('[,:]',x) for x in source_spectrum['DeconvMassPeakIndices'].split(';') if x]
+  sublists = {m: list(map(int, i)) for m,*i in par}.values()
+  indices = list(itertools.chain.from_iterable(sublists))
+  indices.sort()
+  return indices
+
 def delta_ppm(m1,m2):
   return (m1 - m2) / m2 * 10**6
 
@@ -71,15 +80,19 @@ def discharge_mz(givenmass, z, chargemass):
 v_discharge_mz = np.vectorize(discharge_mz)
 # TODO some peaks have 0 matches! => cannot call `vectorize` on size 0 inputs unless `otypes` is set
 
-def get_source_peaks(range_l, range_r, source_spectrum):
-  target_idx = np.where(np.logical_and(source_spectrum["m/z array"] > range_l, source_spectrum["m/z array"] < range_r))
+def get_source_peaks(range_l, range_r, source_spectrum, match_expect=None):
+  target_idx = np.where(np.logical_and(source_spectrum["m/z array"] > range_l, source_spectrum["m/z array"] < range_r))[0]
+  if not match_expect:
+    match_expect = parse_source_spectra_meta(source_spectrum)
+  isomatch_idx = np.intersect1d(target_idx, match_expect)
   return source_spectrum["m/z array"][target_idx], \
           source_spectrum["intensity array"][target_idx], \
-          np.ones(len(target_idx[0]))*-1
+          [1 if t in isomatch_idx else -1 for t in target_idx]
 
 def acquire_targets_per_spectrum(deconv_spectrum: Dict[str,Any], source_spectrum: Dict[str,Any]):
   target_matches = list()
   specref = parse_deconv_spectra_meta(deconv_spectrum)
+  isoref = parse_source_spectra_meta(source_spectrum)
   # TODO replace for-cascade with product 
   # see (http://stephantul.github.io/python/2019/07/20/product/
   # or https://note.nkmk.me/en/python-itertools-product/)
@@ -89,38 +102,33 @@ def acquire_targets_per_spectrum(deconv_spectrum: Dict[str,Any], source_spectrum
                                     specref.isotoperangelimits[i][0], 
                                     specref.isotoperangelimits[i][1], 
                                     specref.massoffset, specref.chargemass)
-      target_range_mz, target_range_int, target_range_iso = get_source_peaks(range_l, range_r, source_spectrum)
+      target_range_mz, target_range_int, target_range_iso = get_source_peaks(range_l, range_r, source_spectrum, isoref)
       if target_range_mz.size > 0:
         target_range_mass = v_discharge_mz(target_range_mz, z, specref.chargemass)
       else:
         target_range_mass = target_range_mz
-      for e in range(specref.isotoperangelimits[i][0], specref.isotoperangelimits[i][1]+1):
-          target_mz_iso = calc_mz(source_spectrum["m/z array"][i],z,e, specref.massoffset, specref.chargemass)
-          mz_window_l, mz_window_r = get_match_window(target_mz_iso, specref.tolerance)
-          np.put(target_range_iso, np.where(np.logical_and(target_range_mz > mz_window_l, target_range_mz < mz_window_r)), e)
       target_matches.append(
           TargetRef(deconv_spectrum["id"],
-                    i, deconv_spectrum["m/z array"][i], z,
-                    target_range_mass, target_range_int, target_range_iso)
+            i, deconv_spectrum["m/z array"][i], z,
+            target_range_mass, target_range_int, target_range_iso)
       )
   return target_matches
-
 
 def load_mzml(base_dir):
   spec_paths = [f for f in os.listdir(base_dir) if f.endswith('.mzML')]
   comprefina = os.path.commonprefix(spec_paths)
 
   with mzml.read(os.path.join(base_dir, comprefina + "deconv.mzML")) as reader:
-    deconv_spectra = [spectrum for spectrum in reader]
+    deconv_spectra = {spectrum['id']: spectrum for spectrum in reader}
 
   with mzml.read(os.path.join(base_dir + comprefina + "annot.mzML")) as reader:
-    annot_spectra = [spectrum for spectrum in reader]
+    annot_spectra = {spectrum['id']:spectrum for spectrum in reader}
   
   run_name = os.path.basename(comprefina).rstrip('_')
 	
-  vis_dict = dict()
-  for deconv_spectrum, annot_spectrum in zip(deconv_spectra, annot_spectra):
-    vis_dict[deconv_spectrum['id']] = acquire_targets_per_spectrum(deconv_spectrum,annot_spectrum)
+  vis_dict = dict()  # is a dict of spectrum id ('controllerType=0 .. scan=101') to list of corresponding TargetRefs
+  for spectrum_id in set(deconv_spectra.keys()).intersection(set(annot_spectra.keys())):
+    vis_dict[spectrum_id] = acquire_targets_per_spectrum(deconv_spectra[spectrum_id], annot_spectra[spectrum_id])
   
   return run_name, deconv_spectra, annot_spectra, vis_dict
 
