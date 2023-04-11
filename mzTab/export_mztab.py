@@ -7,7 +7,7 @@ import re
 from Bio.SeqIO.FastaIO import SimpleFastaParser
 from os import path
 
-# TODO mzTab header
+# TODO
 # nice to have: MTD software[1-n]-setting[1-n] ??? 
 # do we need full modification-choice flexibility in our app?
 # protein_search_engine_score is E-value too, but no CV?!
@@ -33,6 +33,7 @@ MTD sample_processing[1] [ERO, ERO:0000763, concentration calculation]|[NCIT, NC
 MTD sample_processing[2] [CHMO, CHMO:0000524, liquid chromatography-mass spectrometry]
 MTD fixed_mod[1] [UNIMOD, UNIMOD:4, Carbamidomethyl, ]
 MTD variable_mod[1] [UNIMOD, UNIMOD:35, Oxidation, ]
+COM PSM section entries are in fact PrSM
 """
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -127,16 +128,8 @@ def toppic2mztab(prsms_single, proteoforms_single, output_filepath, fasta, h5):
         click.echo(e)
         print_help()
 
-    rigged_cols_pr = { 
-        'ambiguity_members': 'null',	
-        'taxid': db_tax,
-        'species': db_species,
-        'database': 'UniProtKB',
-        'database_version': datetime.today().strftime('%Y-%m') + ' (' + str(db_len) + ')',
-        'search_engine': '[MS, MS:1002901, TopPIC, ]',
-        'PRH': 'PRT'
-    }
-
+    ## Proteoform table section
+    # map input table to mzTab-TDP where possible
     col_map_pr = {
         'Retention time':'opt_global_RT', 
         '#peaks':'opt_proteoform_peak_number', 
@@ -152,19 +145,27 @@ def toppic2mztab(prsms_single, proteoforms_single, output_filepath, fasta, h5):
         'Spectrum ID': 'opt_proteoform_evidence_spectra',
         'Prsm ID': 'opt_PrSM_ID'
     }
-
-    # TODO spectrum identifier for proteoforms more than one???
-    # TODO PrSM to proteoform rows via spectra ???
-    # TODO modifications
-
+    # rig columns that need special treatment but static
+    rigged_cols_pr = { 
+        'ambiguity_members': 'null',	
+        'taxid': db_tax,
+        'species': db_species,
+        'database': 'UniProtKB',
+        'database_version': datetime.today().strftime('%Y-%m') + ' (' + str(db_len) + ')',
+        'search_engine': '[MS, MS:1002901, TopPIC, ]',
+        'PRH': 'PRT'
+    }
+    # assemble proteoform mzTab table
     dfs['pro_single'].drop(columns=dfs['pro_single'].columns.difference(col_map_pr.keys()), inplace=True)
     dfs['pro_single'].rename(columns=col_map_pr, errors="raise", inplace=True)
     dfs['pro_single'] = dfs['pro_single'].join(pd.DataFrame({k:[v]*len(dfs['pro_single']) for k,v in rigged_cols_pr.items()}))
     dfs['pro_single']["opt_proteoform_sequence"] = dfs['pro_single']["opt_proteoform_sequence"].apply(strip_seq)  
-
+    #sort the order of appearance for the cols
     col_order = ["PRH","opt_proteoform_sequence"]
     dfs['pro_single'] = dfs['pro_single'].reindex(columns=col_order+list((set(dfs['pro_single'].columns.to_list())- set(col_order))))
 
+    ## PrSM table section
+    # rig columns that need special treatment but static
     rigged_cols_sm = { 
         'database': 'UniProtKB',
         'database_version': datetime.today().strftime('%Y-%m') + ' (' + str(db_len) + ')',
@@ -172,12 +173,7 @@ def toppic2mztab(prsms_single, proteoforms_single, output_filepath, fasta, h5):
         'PSH': 'PSM',
         'unique':  False,
     }
-
-    # TODO modifications
-    # TODO document PSM_ID == PrSM_ID in MTD
-    # TODO scan or spectrum id? also value = ms_run[1-n]:{SPECTRA_REF}
-    # TODO '#variable PTMs' == 'modifications' not as specification states number of all mods, could combine with #unexpected modifications
-
+    # map input table to mzTab-TDP where possible
     col_map_sm = {
         'Retention time':'retention_time', 
         'Proteoform': 'sequence',
@@ -197,33 +193,28 @@ def toppic2mztab(prsms_single, proteoforms_single, output_filepath, fasta, h5):
         '#matched peaks': 'opt_prsm_peaks_matched', 
         '#matched fragment ions': 'opt_prsm_fragments_matched', 
     }
-
+    # adjust cols to mzTab spec
     massaged_cols = {
         'pre': dfs['prsm_single']['Proteoform'].str.extract(r'^(\w)\.').replace(np.nan,'-'),
         'post': dfs['prsm_single']['Proteoform'].str.extract(r'.*\.(\w*)$').replace('','-')
     }
-
-    #sequence col before renaming!
+    # clean the sequence column before assembly
     dfs['prsm_single']["Proteoform"] = dfs['prsm_single']["Proteoform"].apply(strip_seq)  
-
-    # TODO what to do with:
-    # exp_mass_to_charge
-    # calc_mass_to_charge
-    # link psm-protein sub-tables how???
 
     dfs['prsm_single'].drop(columns=dfs['prsm_single'].columns.difference(col_map_sm.keys()), inplace=True)
     dfs['prsm_single'].rename(columns=col_map_sm, errors="raise", inplace=True)
     dfs['prsm_single'] = dfs['prsm_single'].join(
         pd.DataFrame({k:[v]*len(dfs['prsm_single']) for k,v in rigged_cols_sm.items()})
     )
+    #sort the order of appearance for the cols
     for k,v in massaged_cols.items():
         dfs['prsm_single'][k] = v
-    # dfs['prsm_single']["sequence"] = dfs['prsm_single']["sequence"].apply(strip_seq)  
     col_order = ["PSH","sequence"]
     dfs['prsm_single'] = dfs['prsm_single'].reindex(columns=col_order+list((set(dfs['prsm_single'].columns.to_list())- set(col_order))))
 
     print(INFO.format(m=len(dfs['prsm_single']), n=len(dfs['pro_single'])))
 
+    # see 'header' for custom static mzTab file content documentation
     with open(output_filepath,'w') as f:
         f.writelines( header.format(filename=peakfile_name) )
         f.write('\n')
@@ -234,9 +225,9 @@ def toppic2mztab(prsms_single, proteoforms_single, output_filepath, fasta, h5):
     if h5:
         dfs['prsm_single'].to_hdf(h5, key='prsms', mode='w')
         dfs['pro_single'].to_hdf(h5, key='proteoforms', mode='a')
-        # read_hdf(h5_prsm, key='df')
-        # make note that read will work guaranteed only on the same system, different environments may experience issues due protocol
-        # see: https://github.com/DeepLabCut/DLCutils/issues/19 and https://stackoverflow.com/questions/63329657/python-3-7-error-unsupported-pickle-protocol-5
+    # read_hdf(h5_prsm, key='df')
+    # make note that read will work guaranteed only on the same system, different environments may experience issues due protocol
+    # see: https://github.com/DeepLabCut/DLCutils/issues/19 and https://stackoverflow.com/questions/63329657/python-3-7-error-unsupported-pickle-protocol-5
 
 
 if __name__ == '__main__':
