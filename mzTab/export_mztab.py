@@ -8,12 +8,9 @@ from Bio.SeqIO.FastaIO import SimpleFastaParser
 from os import path
 
 # TODO mzTab header
-# MTD software[1-n]-setting[1-n] ??? 
-# MTD fixed_mod[1] [UNIMOD, UNIMOD:4, Carbamidomethyl, ] ..?
-# MTD variable_mod[1] [UNIMOD, UNIMOD:35, Oxidation, ] ..?
-# do we need full modification-choice flexibility in our app? default var M16 fix - 
+# nice to have: MTD software[1-n]-setting[1-n] ??? 
+# do we need full modification-choice flexibility in our app?
 # protein_search_engine_score is E-value too, but no CV?!
-# MTD sample_processing[1-n] ??? 
 header = """
 COM This is the mzTab to a minimal "Summary Top-Down Proteoform Identification Report"  
 MTD mzTab-version   1.0.0 
@@ -32,6 +29,10 @@ MTD software[3] [MS, MS:1002901, TopPIC, ]
 MTD psm_search_engine_score[1]  [MS, MS:1002928, TopPIC:spectral E-value, ]
 MTD psm_search_engine_score[2]  [MS, MS:1002932, TopPIC:MIScore, ]
 MTD protein_search_engine_score[1]  [MS:1002906, search engine specific score for proteoforms,]
+MTD sample_processing[1] [ERO, ERO:0000763, concentration calculation]|[NCIT, NCIT:C124326, Aliquotting, ]
+MTD sample_processing[2] [CHMO, CHMO:0000524, liquid chromatography-mass spectrometry]
+MTD fixed_mod[1] [UNIMOD, UNIMOD:4, Carbamidomethyl, ]
+MTD variable_mod[1] [UNIMOD, UNIMOD:35, Oxidation, ]
 """
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
