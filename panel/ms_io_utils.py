@@ -68,11 +68,17 @@ def get_match_window(mass,tolerance):
   return mass-md, mass+md  
 
 def calc_mz(givenmass, z, iso, massoffset, chargemass):
-  return (givenmass - massoffset + iso * TIMD_CONST)/z + chargemass
+  if z>0:
+    return (givenmass - massoffset + iso * TIMD_CONST)/z + chargemass
+  else:
+    return 0
 
 def calc_range(givenmass, z, iso_min, iso_max, massoffset, chargemass):
-  return ((givenmass - massoffset + (iso_min-2) * TIMD_CONST)/z + chargemass, 
-          (givenmass - massoffset + (iso_max+2) * TIMD_CONST)/z + chargemass )
+  if z>0:
+    return ((givenmass - massoffset + (iso_min-2) * TIMD_CONST)/z + chargemass, 
+            (givenmass - massoffset + (iso_max+2) * TIMD_CONST)/z + chargemass )
+  else:
+    return 0
 
 def discharge_mz(givenmass, z, chargemass):
   return (givenmass - chargemass) * z
@@ -117,7 +123,7 @@ def acquire_targets_per_spectrum(deconv_spectrum: Dict[str,Any], source_spectrum
 def load_mzml(base_dir):
   spec_paths = [f for f in os.listdir(base_dir) if f.endswith('.mzML')]
   comprefina = os.path.commonprefix(spec_paths)
-
+  print(comprefina)
   with mzml.read(os.path.join(base_dir, comprefina + "deconv.mzML")) as reader:
     deconv_spectra = {spectrum['id']: spectrum for spectrum in reader}
 
