@@ -78,7 +78,7 @@ def calc_range(givenmass, z, iso_min, iso_max, massoffset, chargemass):
     return ((givenmass - massoffset + (iso_min-2) * TIMD_CONST)/z + chargemass, 
             (givenmass - massoffset + (iso_max+2) * TIMD_CONST)/z + chargemass )
   else:
-    return 0
+    return (0,0)
 
 def discharge_mz(givenmass, z, chargemass):
   return (givenmass - chargemass) * z

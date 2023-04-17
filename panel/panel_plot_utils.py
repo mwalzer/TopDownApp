@@ -104,11 +104,22 @@ def plot_3d_spectrum(pidx, sidx, deconv_spectra, vis_dict):
           'type': 'noise' if t.isotope_matches[idx]<0 else 'isomatch'}
       )
   
-  maxi = max([0]+[max(t.intensity_matches) for t in choice_peak_matches if len(t.intensity_matches)])  
-  maxi = max(maxi,1)
-  maxz = max([0]+[isoc.charge for isoc in choice_peak_matches if isoc.mass_matches.size>0])
-  maxz = max(maxz,3)
-  # print("max",maxz,maxi)
+  iso_bins = [isoc.charge for isoc in choice_peak_matches if isoc.mass_matches.size>0]
+  int_bins = [max(t.intensity_matches) for t in choice_peak_matches if len(t.intensity_matches)]
+  if int_bins:
+    maxi = max(int_bins)
+  else:
+    maxi = 10
+  if iso_bins:
+    maxz = max(iso_bins)
+    minz = min(iso_bins)
+  else:
+    maxz = 3
+    minz = 1
+  print("max",maxz,maxi,"min",minz)
+
+  axis_charge_min = max(0,minz-1)
+  axis_charge_max = maxz+1
 
   avrgn_masses, avrgn_ints = mass_to_dist(choice_peak_mass, averagine_aa, averagine_iso)
   # print("avrgn", avrgn_masses, avrgn_ints)
@@ -129,7 +140,7 @@ def plot_3d_spectrum(pidx, sidx, deconv_spectra, vis_dict):
   explicit_cmapping = {'noise': 'lightcoral', 'isomatch':'mediumblue'}  # https://holoviews.org/user_guide/Styling_Plots.html
   fig = hv.Path3D(vis_peaks, vdims='type').opts(azimuth=40, elevation=20)\
     .opts(color='type', cmap=explicit_cmapping)\
-    .opts(xlim=(0,maxz+1),xticks=list(range(0,maxz+1)))
+    .opts(xlim=(axis_charge_min,axis_charge_max),xticks=list(range(axis_charge_min,axis_charge_max+1)))
   # fog = hv.Scatter3D(iso_traces).opts(c='grey', s=.1, azimuth=40, elevation=20, alpha=0.1)
   fug = hv.Path3D(averagine_peaks).opts(color='grey', linewidth=.2, azimuth=40, elevation=20)#, alpha=0.1
   fig_fin = (fug*fig).opts(
