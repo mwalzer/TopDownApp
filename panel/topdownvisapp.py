@@ -157,7 +157,7 @@ def trigger_wf_func(event):
             "fasta": input_path_store.fasta_path,
             "mods": "/opt/app/modconf/" + mods_radio_group.value, 
         })
-        # switched off for debug
+        # might be switched off for debugging
         print("Loading spectra")
         workflow_result_store = WorkflowResults(*load_mzml(BASE_DIR))
         print("Loading ids")
@@ -221,8 +221,12 @@ mztab_button = pn.widgets.Button(name='download mzTab', width=50, disabled=True)
 
 spectra_tbl = pn.widgets.Tabulator(
         pd.DataFrame({},columns=['MS level', 'Scan', 'RT', '# peaks']), 
-        height=400,
+        # height=400,
         disabled=True,
+        pagination='local',
+        page_size=10,
+        header_filters=True,
+        widths={'index':'5%', 'MS level':'20%', 'Scan':'25%', 'RT':'25%', '# peaks':'25%'},
     )
 
 def spectra_tbl_click(*events):
@@ -240,6 +244,8 @@ peak_tbl = pn.widgets.Tabulator(
         pd.DataFrame({},columns=['RT', 'Mass', 'Intensity']),
         height=300,
         disabled=True,
+        sizing_mode='stretch_width',
+        pagination='local',
 )
 
 peak_name = pn.pane.Markdown(object="No peak selected.")
@@ -264,9 +270,21 @@ peak_tbl.on_click(peak_tbl_click)
 
 id_tbl = pn.widgets.Tabulator(
         pd.DataFrame({},columns=['RT', 'mass', 'sequence']),
-        height=300,
+        # height=300,
+        pagination='local',
+        page_size=10,
         disabled=True,
+        widths={'index': '5%', 'sequence': '15%'}, 
+        sizing_mode='stretch_width',
 )
+
+def id_tbl_click(*events):
+    event = events[-1]
+    print('id_tbl_click',f'Clicked cell in {event.column!r} column, row {event.row!r} with value {event.value!r}')
+    # update_peak_tbl(event.row)  # spectra_tbl.value.Index.iloc[event.row]
+    # update_spec_fig(event.row)
+    # global current_spec_idx
+    # current_spec_idx = event.row
 
 # ===
 # LAYOUT
@@ -319,6 +337,3 @@ pn.state.template.param.update(
     accent_base_color=ACCENT_BASE_COLOR,
     header_background=ACCENT_BASE_COLOR,
 )
-
-# peak_tbl?
-# charges?
