@@ -280,11 +280,14 @@ id_tbl = pn.widgets.Tabulator(
 
 def id_tbl_click(*events):
     event = events[-1]
-    print('id_tbl_click',f'Clicked cell in {event.column!r} column, row {event.row!r} with value {event.value!r}')
-    # update_peak_tbl(event.row)  # spectra_tbl.value.Index.iloc[event.row]
-    # update_spec_fig(event.row)
-    # global current_spec_idx
-    # current_spec_idx = event.row
+    # print('id_tbl_click',f'Clicked cell in {event.column!r} column, row {event.row!r} with value {event.value!r}')
+    # print('and in spectra_ref col that is', id_tbl.value.spectra_ref.iloc[event.row])  # I need col spectra_ref
+    update_peak_tbl(id_tbl.value.spectra_ref.iloc[event.row])  # spectra_tbl.value.Index.iloc[event.row]
+    update_spec_fig(id_tbl.value.spectra_ref.iloc[event.row])
+    global current_spec_idx
+    current_spec_idx = id_tbl.value.spectra_ref.iloc[event.row]
+
+id_tbl.on_click(id_tbl_click) 
 
 # ===
 # LAYOUT
