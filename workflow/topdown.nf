@@ -25,7 +25,7 @@ params.outdir = params.outdir ?: { log.warn "No output directory provided. Will 
 // params.raw_file = params.raw_file ?: { log.error "No raw file provided. Make sure you have used the '--raw_file' option."; exit 1 }()
 params.raw_file = params.raw_file ?: { log.error "No raw file provided. Make sure you have used the '--raw_file' option."; return "/home/walzer/ms-tools/TopDown/TopPIC_tutorial/st_2.raw" }()
 params.fasta = "/home/walzer/ms-tools/TopDown/TopPIC_tutorial/TopPIC_tutorial_uniprot-st.fasta"
-params.mods = "/home/walzer/ms-tools/TopDown/common_mods.txt"
+params.mods = "/home/walzer/ms-tools/TopDown/common_mods_None.txt"
 raw_file = file(params.raw_file)
 
 def helpMessage() {

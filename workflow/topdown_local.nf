@@ -24,10 +24,6 @@ To-Dos:
 params.raw_file = params.raw_file ?: { log.error "No raw file provided. Make sure you have used the '--raw_file' option."; exit 1 }()
 params.fasta = params.fasta ?: { log.error "No fasta file provided. Make sure you have used the '--fasta' option."; exit 1 }()
 params.mods = params.mods ?: { log.error "No mods file provided. Make sure you have used the '--mods' option."; exit 1 }()
-
-//params.raw_file = params.raw_file ?: { log.error "No raw file provided. Make sure you have used the '--raw_file' option."; return "/home/walzer/ms-tools/TopDown/TopPIC_tutorial/st_2.raw" }()
-//params.fasta = "/home/walzer/ms-tools/TopDown/TopPIC_tutorial/TopPIC_tutorial_uniprot-st.fasta"
-//params.mods = "/home/walzer/ms-tools/TopDown/common_mods.txt"
 params.outdir = params.outdir ?: { log.warn "No output directory provided. Will put the results into '/tmp/results'"; return "/tmp/results" }()
 raw_file = file(params.raw_file)
 
