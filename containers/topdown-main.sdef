@@ -47,19 +47,16 @@ includecmd: yes
 	nextflow info
 	python -m pip install -r /opt/app/requirements.txt  # all reqs for tools used in wf and from the app
 	nextflow -v
-	
-#---
-# install dependencies
-#---
-	apt update
-	apt install -q --assume-yes wget unzip 
-	apt install -q --assume-yes mono-complete
-	
+
 #---
 # TRFP
 #--
 	TRFP_url=https://github.com/compomics/ThermoRawFileParser/releases/download/v1.4.2/ThermoRawFileParser1.4.2.zip
 
+	apt update
+	apt install -q --assume-yes wget unzip 
+	apt install -q --assume-yes mono-complete
+	
 	cd /tmp/
 	TRFP_d=/opt/trfp
 	TEMP_tmp=$(mktemp) 
@@ -71,3 +68,26 @@ includecmd: yes
 	echo mono $TRFP_d/ThermoRawFileParser.exe >> /usr/local/bin/ThermoRawFileParser.sh \"\$\@\"
 	chmod ugo+rx /usr/local/bin/ThermoRawFileParser.sh
 
+
+#---
+# inception
+#--
+
+SING_url=https://github.com/singularityware/singularity/releases/download/v3.5.3/singularity-3.5.3.tar.gz
+	export DEBIAN_FRONTEND=noninteractive
+	apt install -y build-essential \
+		libssl-dev uuid-dev libgpgme11-dev squashfs-tools \
+		libseccomp-dev wget pkg-config git cryptsetup debootstrap
+	
+	wget https://dl.google.com/go/go1.13.linux-amd64.tar.gz
+	tar --directory=/usr/local -xzvf go1.13.linux-amd64.tar.gz
+	export PATH=/usr/local/go/bin:$PATH
+	wget $SING_url
+	tar -xzvf singularity-3.5.3.tar.gz
+	cd singularity
+	./mconfig --without-suid
+	cd builddir
+	make
+	make install
+
+	
