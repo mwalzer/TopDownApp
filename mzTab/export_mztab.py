@@ -81,7 +81,7 @@ def strip_seq(s:str) -> str:
         return rs[0]
 
 def extract_peakfile_name(s:str, l:int) -> str:
-    ps = pd.read_csv(s, sep='\t', skiprows=1, nrows=l-2, header=None, error_bad_lines=False, warn_bad_lines=False)  # since 1.3 ,on_bad_lines='skip'
+    ps = pd.read_csv(s, sep='\t', skiprows=1, nrows=l-2, header=None, on_bad_lines='warn')
     ps[0] = ps[0].str.strip()
     ps.set_index(0, inplace=True)
     pl = ps.to_dict('index')

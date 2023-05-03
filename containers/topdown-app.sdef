@@ -1,7 +1,29 @@
-Bootstrap: docker
-From: python:3.10-slim-buster
+Bootstrap: localimage
+From: topdown-tools:may23.simg
 
 includecmd: yes
+
+#===
+%runscript
+#===
+    panel serve /opt/app/topdownvisapp.py
+
+#===
+%files 
+#===
+	../panel/topdownvisapp.py /opt/app/topdownvisapp.py
+	../panel/requirements.txt /opt/app/requirements.txt
+	../panel/panel_plot_utils.py /opt/app/panel_plot_utils.py
+	../panel/ms_io_utils.py /opt/app/ms_io_utils.py
+	../workflow/topdown_local.nf /opt/app/wf/topdown_local.nf
+	../workflow/nf.config /opt/app/wf/nf.config
+	../config/common_mods_OxMethPhos.txt /opt/app/modconf/common_mods_OxMethPhos.txt
+	../config/common_mods_OxMethAcetPhos.txt /opt/app/modconf/common_mods_OxMethAcetPhos.txt
+	../config/common_mods_OxMethAcet.txt /opt/app/modconf/common_mods_OxMethAcet.txt
+	../config/common_mods_OxMeth.txt /opt/app/modconf/common_mods_OxMeth.txt
+	../config/common_mods_Ox.txt /opt/app/modconf/common_mods_Ox.txt
+	../config/common_mods_Meth.txt /opt/app/modconf/common_mods_Meth.txt
+	../mzTab/export_mztab.py /opt/app/export_mztab.py
 
 #===
 %environment
@@ -11,7 +33,6 @@ includecmd: yes
 #===
 %post
 #===
-	#URL = none
 
 #---
 # install dependencies
@@ -23,6 +44,48 @@ includecmd: yes
 #---
 # panel and nextflow
 #---
-	pip install nextflow
+	pip install "nextflow<23"
 	nextflow info
 	pip install numpy pandas tables scipy panel holoviews alphapept
+
+#---
+# TRFP
+#--
+	TRFP_url=https://github.com/compomics/ThermoRawFileParser/releases/download/v1.4.2/ThermoRawFileParser1.4.2.zip
+
+	apt update
+	apt install -q --assume-yes wget unzip 
+	apt install -q --assume-yes mono-complete
+	
+	cd /tmp/
+	TRFP_d=/opt/trfp
+	TEMP_tmp=$(mktemp) 
+	wget -O $TEMP_tmp $TRFP_url &&
+		unzip -d $TRFP_d $TEMP_tmp &&
+		rm -f $TEMP_tmp 
+		
+	echo \#\!/bin/bash > /usr/local/bin/ThermoRawFileParser.sh
+	echo mono $TRFP_d/ThermoRawFileParser.exe >> /usr/local/bin/ThermoRawFileParser.sh \"\$\@\"
+	chmod ugo+rx /usr/local/bin/ThermoRawFileParser.sh
+
+
+#---
+# inception
+#--
+    SING_url=https://github.com/singularityware/singularity/releases/download/v3.5.3/singularity-3.5.3.tar.gz
+	export DEBIAN_FRONTEND=noninteractive
+	apt install -y build-essential \
+		libssl-dev uuid-dev libgpgme11-dev squashfs-tools \
+		libseccomp-dev wget pkg-config git cryptsetup debootstrap
+	
+	wget https://dl.google.com/go/go1.13.linux-amd64.tar.gz
+	tar --directory=/usr/local -xzvf go1.13.linux-amd64.tar.gz
+	export PATH=/usr/local/go/bin:$PATH
+	wget $SING_url
+	tar -xzvf singularity-3.5.3.tar.gz
+	cd singularity
+	./mconfig --without-suid
+	cd builddir
+	make
+	make install
+

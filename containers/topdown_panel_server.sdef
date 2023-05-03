@@ -1,0 +1,23 @@
+Bootstrap: docker
+From: python:3.10-slim-buster
+
+includecmd: yes
+%files
+    /home/walzer/ms-tools/TopDown/data/cyto/190226_Cyto_1_FD_500ng_annotated.mzML /workspaces/TopDown/data/cyto/
+	/home/walzer/ms-tools/TopDown/data/cyto/190226_Cyto_1_FD_500ng_deconv.mzML /workspaces/TopDown/data/cyto/
+	/home/walzer/ms-tools/TopDown/panel/static_file_topdown.ipynb /workspaces/TopDown/panel/
+
+%environment
+    export PATH="/opt/thirdparty/LuciPHOr2:/thirdparty/MSGFPlus:/opt/thirdparty/Sirius:/opt/thirdparty/ThermoRawFileParser:/opt/thirdparty/Comet:/opt/thirdparty/Fido:/opt/thirdparty/MaRaCluster:/opt/thirdparty/MyriMatch:/opt/thirdparty/OMSSA:/opt/thirdparty/Percolator:/opt/thirdparty/SpectraST:/opt/thirdparty/XTandem:/opt/thirdparty/crux:${PATH}"
+	export PATH=/opt/flashdeconv/bin/:${PATH}
+	export LD_LIBRARY_PATH=/opt/flashdeconv/lib/:${LD_LIBRARY_PATH}
+	export OPENMS_DATA_PATH=/OpenMS/share/OpenMS
+	
+%post
+	# install dependencies
+	pip install mypy altair altair_viewer matplotlib plotly "jupyterlab>=3" \
+		"ipywidgets>=7.6" jupyter-dash numba numpy pandas lxml pyteomics \
+		spectrum_utils jupyter flask "holoviews[recommended]" tables holoviews \
+		datashader hvplot ipython scipy
+	pip install numba --upgrade
+

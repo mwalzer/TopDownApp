@@ -15,7 +15,7 @@ includecmd: yes
 #===
 %files 
 #===
-	mzTab/export_mztab.py /opt/app/export_mztab.py
+	../mzTab/export_mztab.py /opt/app/export_mztab.py
 	
 #===
 %post
