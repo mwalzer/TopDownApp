@@ -8,7 +8,7 @@ import datashader as ds
 from alphapept.constants import averagine_aa, averagine_avg
 from alphapept.constants import isotopes as averagine_iso
 from alphapept.chem import get_average_formula, mass_to_dist
-
+from collections import defaultdict
 
 def plot_2d_spectra(sidx, annot_spectra, deconv_spectra):
   if sidx not in range(0,len(deconv_spectra)):
@@ -96,27 +96,25 @@ def plot_3d_spectrum(pidx, sidx, deconv_spectra, vis_dict):
   plot_title = ' '.join([spectrum["id"].split(' ')[-1], 'precursor mass=', str(choice_peak_mass), 'selected peak index=', str(pidx)])
 
   #for each charge there is an element in target_matches with resp. peak index that now gets formed into vis_peaks
-  vis_peaks = list()
+  hv_vis_peaks = list()
+  vis_int_per_z = defaultdict(list)
   for t in choice_peak_matches:
     for idx, m in enumerate(t.mass_matches):
-      vis_peaks.append(
+      hv_vis_peaks.append(
           {('x', 'y', 'z'): [[t.charge,m,0],[t.charge,m,t.intensity_matches[idx]]], 
           'type': 'noise' if t.isotope_matches[idx]<0 else 'isomatch'}
       )
+      vis_int_per_z[t.charge].append(t.intensity_matches[idx])
   
-  iso_bins = [isoc.charge for isoc in choice_peak_matches if isoc.mass_matches.size>0]
-  int_bins = [max(t.intensity_matches) for t in choice_peak_matches if len(t.intensity_matches)]
-  if int_bins:
-    maxi = max(int_bins)
-  else:
-    maxi = 10
-  if iso_bins:
-    maxz = max(iso_bins)
-    minz = min(iso_bins)
-  else:
-    maxz = 3
-    minz = 1
-  print("max",maxz,maxi,"min",minz)
+  print(vis_int_per_z)
+  maxz = max(vis_int_per_z.keys())
+  minz = min(vis_int_per_z.keys())
+  for c in range(minz,maxz+1):
+    if c in vis_int_per_z:
+      vis_int_per_z[c] = max(vis_int_per_z[c])
+  maxi = max(vis_int_per_z.values())
+  # mini = min(vis_int_per_z.values())  # only the min of max's
+  print("maxz",maxz,"maxi",maxi,"minz",minz)
 
   axis_charge_min = max(0,minz-1)
   axis_charge_max = maxz+1
@@ -127,22 +125,22 @@ def plot_3d_spectrum(pidx, sidx, deconv_spectra, vis_dict):
   #for each charge there is also the averagine model peaks for the selected peak's precursor_mass 
   # which we collected in averagine_peaks with intensities 
   averagine_peaks = list() 
-  for c in [isoc.charge for isoc in choice_peak_matches if isoc.mass_matches.size>0]:
+  for c,cmaxi in vis_int_per_z.items():
     # c size of avrgn_masses zip avrgn_ints
     averagine_peaks.append(
-        {('x', 'y', 'z'): [[c, m, i*maxi] for m,i in zip(avrgn_masses, avrgn_ints)]}
+        {('x', 'y', 'z'): [[c, m, i*cmaxi] for m,i in zip(avrgn_masses, avrgn_ints)]}
     )
 
   # print("peaks", len(vis_peaks), len(averagine_peaks))
-  if not vis_peaks: 
+  if not hv_vis_peaks: 
     return dummy_3d_fig()
 
   explicit_cmapping = {'noise': 'lightcoral', 'isomatch':'mediumblue'}  # https://holoviews.org/user_guide/Styling_Plots.html
-  fig = hv.Path3D(vis_peaks, vdims='type').opts(azimuth=40, elevation=20)\
+  fig = hv.Path3D(hv_vis_peaks, vdims='type').opts(azimuth=40, elevation=20)\
     .opts(color='type', cmap=explicit_cmapping)\
     .opts(xlim=(axis_charge_min,axis_charge_max),xticks=list(range(axis_charge_min,axis_charge_max+1)))
   # fog = hv.Scatter3D(iso_traces).opts(c='grey', s=.1, azimuth=40, elevation=20, alpha=0.1)
-  fug = hv.Path3D(averagine_peaks).opts(color='grey', linewidth=.2, azimuth=40, elevation=20)#, alpha=0.1
+  fug = hv.Path3D(averagine_peaks).opts(color='black', linestyle='dashed', linewidth=.6, azimuth=40, elevation=20)  #, alpha=0.1
   fig_fin = (fug*fig).opts(
               ylabel="Mass",
               xlabel="Charge",
