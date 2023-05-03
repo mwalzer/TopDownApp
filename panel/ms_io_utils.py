@@ -32,19 +32,51 @@ class TargetRef:
 
 
 def parse_deconv_spectra_meta(spectrum: Dict[str,Any]) -> SpecRef:
-  tolerance, massoffset, chargemass, *peaknotes = spectrum['DeconvMassInfo'].split(';')
+  # value="tol=10;massoffset=0.000000;chargemass=1.007276;precursorscan=0;precursormass=0;peaks=1:1,0:1;1:1,0:1;1:1,0:1;cos=0.99441,0.995398,0.952226,;snr=7.9401,43.5187,3.78004,;qscore=0.817107,0.758096,0.651915,;qvalue=0.817107,0.758096,0.651915,"
+  if "precursorscan" in spectrum['DeconvMassInfo'] and\
+     "precursormass" in spectrum['DeconvMassInfo']:
+    tolerance, massoffset, chargemass, precursorscan, precursormass, *peaknotes = spectrum['DeconvMassInfo'].split(';')
+    precursorscan = int(precursorscan.split('=')[1])
+    precursormass = float(precursormass.split('=')[1])
+  else:
+    tolerance, massoffset, chargemass, *peaknotes = spectrum['DeconvMassInfo'].split(';')
   tolerance = float(tolerance.split('=')[1])
   massoffset = float(massoffset.split('=')[1])
   chargemass = float(chargemass.split('=')[1])
-  peaknotes[0] = peaknotes[0].split('=')[1]  # remove 'header' before and up to '='
-  peaknotes = [i.split(',') for i in peaknotes if i]  # 'if i' necessary because of trailing ','
-  chargeranges, isotoperanges = list(map(list, zip(*peaknotes)))
-  chargerangelimits = [tuple(map(int, i.split(':'))) for i in chargeranges]
-  isotoperangelimits = [tuple(map(int, j.split(':'))) for j in isotoperanges]
+
+  # TODO this is only necessary because of the ';' separator reuse
+  # TODO best would be to avoid paired pairs altogether peaks=(zip(chargeranges, isotoperanges)), one chargerange=[min:max]
+  peaknotes = peaknotes[::-1]
+  token = peaknotes.pop()
+  peaks = list()
+  while token.startswith("peaks=") or not re.match("^[a-zA-Z]+=.*", token):
+    peaks.append(token)
+    token = peaknotes.pop()
+  peaknotes.append(token)  # append last after condition test fail
+  peaknotes.append('|'.join(peaks))
+  peaknotes = peaknotes[::-1]
+
+  notes = dict()
+  for token in re.finditer(r"(([a-zA-Z]+=)([\d\:\.,|]+))", ';'.join(peaknotes)):
+    # print(token)
+    k=token.group(2).rstrip('=')
+    v=token.group(3).rstrip(';,|')
+    if k == "peaks":
+      notes.update({k: v.split('|')})
+    else:
+      notes.update({k: [float(i) for i in v.split(',')]})   
+  
+  if "peaks" in notes:
+    chargeranges, isotoperanges = [list(x) for x in zip(*[ tup.split(',') for tup in notes["peaks"]])]  #this is not correct
+    chargerangelimits = [tuple(map(int, i.split(':'))) for i in chargeranges]
+    isotoperangelimits = [tuple(map(int, j.split(':'))) for j in isotoperanges]
+  # TODO above will fail if userParam is malformed (not exactly two \d\:\d per ';' split token)
   # TODO check len(spectrum) == len(chargerangelimits) == len(isotoperangelimits)
-  specref = SpecRef(spectrum['id'],
+    specref = SpecRef(spectrum['id'],
                     tolerance,massoffset,chargemass,
                     chargerangelimits,isotoperangelimits)
+  else:
+    specref = SpecRef(None,None,None,None,None,None)
   return specref
 
 def parse_source_spectra_meta(source_spectrum):
