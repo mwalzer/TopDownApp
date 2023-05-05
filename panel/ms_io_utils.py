@@ -5,11 +5,27 @@ import numpy as np
 import pandas as pd
 from pyteomics import mzml
 from typing import List, Dict, Tuple, Any
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 # TopDown isotope mass difference 55k u see OpenMS::Constants in kyowons branch
 TIMD_CONST = 1.002371  
 # TODO move into config file?!
+
+@dataclass
+class AppInputs:
+    raw_path: str = ""
+    fasta_path: str = ""
+
+@dataclass
+class WorkflowResults:
+    run_name: str = "N/A"
+    deconv_spectra: dict = field(default_factory=dict)
+    annot_spectra: dict = field(default_factory=dict)
+    vis_dict: dict = field(default_factory=dict)
+    deconv_spectra_df:pd.DataFrame = pd.DataFrame()
+    id_dfs: dict = field(default_factory=dict)
+    id_mztabpath: str = ""
+
 
 @dataclass
 class SpecRef:

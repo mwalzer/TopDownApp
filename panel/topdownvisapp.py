@@ -2,29 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import panel as pn
 import re
-from dataclasses import dataclass, field
 import nextflow
 import pandas as pd
 from typing import List,Dict,Any
-from ms_io_utils import load_mzml, load_ids
+from ms_io_utils import load_mzml, load_ids, AppInputs, WorkflowResults
 import panel_plot_utils as ppu
 import holoviews as hv
-
-
-@dataclass
-class AppInputs:
-    raw_path: str = ""
-    fasta_path: str = ""
-
-@dataclass
-class WorkflowResults:
-    run_name: str = "N/A"
-    deconv_spectra: dict = field(default_factory=dict)
-    annot_spectra: dict = field(default_factory=dict)
-    vis_dict: dict = field(default_factory=dict)
-    deconv_spectra_df:pd.DataFrame = pd.DataFrame()
-    id_dfs: dict = field(default_factory=dict)
-    id_mztabpath: str = ""
 
 # font_url="https://fonts.googleapis.com/css?family=Open+Sans"
 # # template=pn.template.FastListTemplate(font_url="https://fonts.googleapis.com/css?family=Open+Sans")
