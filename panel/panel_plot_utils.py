@@ -15,7 +15,7 @@ def plot_2d_spectra(sidx, annot_spectra, deconv_spectra):
     fig_d = hv.Spikes(pd.DataFrame({},columns=['mass','intensity'])).opts(color='green', title="Deconvolved Spectrum {}".format('spectrum["id"]'))
     fig_o = hv.Spikes(pd.DataFrame({},columns=['m/z','intensity'])).opts(color='blue', title="Original Spectrum {}".format('spectrum["id"]'))
     fig_s = fig_o.opts(aspect=3, padding=0.1) + fig_d.opts(aspect=3, padding=0.1)
-    fig_s.opts(aspect_weight=True, tight=False, fig_inches=300, fig_size=3).cols(1)
+    fig_s.opts(aspect_weight=True, tight=False, fig_inches=300, fig_size=3, sublabel_format="").cols(1)
     return fig_s
   spectrum = list(deconv_spectra.values())[sidx]
   ori_spectrum = annot_spectra[spectrum['id']]
