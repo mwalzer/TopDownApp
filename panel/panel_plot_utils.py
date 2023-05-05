@@ -71,7 +71,7 @@ def dummy_3d_fig():
     ).opts(title='Peaks of [ID]', invert_xaxis=True, fig_inches=6,)  #ax.yaxis.get_major_locator().set_params(integer=True)
     return fig
 
-def plot_3d_spectrum(pidx, sidx, deconv_spectra, vis_dict):
+def plot_3d_spectrum(pidx, sidx, deconv_spectra, vis_dict, azimuth=40, elevation=20):
   hv.extension('matplotlib')
 
   if not hasattr(Axis, "_get_coord_info_old"):
@@ -80,7 +80,7 @@ def plot_3d_spectrum(pidx, sidx, deconv_spectra, vis_dict):
 
   if sidx not in range(0,len(deconv_spectra)): 
     return dummy_3d_fig()
-
+  
   spectrum = list(deconv_spectra.values())[sidx]
   target_matches = vis_dict[spectrum['id']]
   # print(target_matches)
@@ -106,7 +106,10 @@ def plot_3d_spectrum(pidx, sidx, deconv_spectra, vis_dict):
       )
       vis_int_per_z[t.charge].append(t.intensity_matches[idx])
   
-  print(vis_int_per_z)
+  # print(vis_int_per_z)
+  if not vis_int_per_z.keys(): 
+    return dummy_3d_fig()
+  
   maxz = max(vis_int_per_z.keys())
   minz = min(vis_int_per_z.keys())
   for c in range(minz,maxz+1):
@@ -114,7 +117,7 @@ def plot_3d_spectrum(pidx, sidx, deconv_spectra, vis_dict):
       vis_int_per_z[c] = max(vis_int_per_z[c])
   maxi = max(vis_int_per_z.values())
   # mini = min(vis_int_per_z.values())  # only the min of max's
-  print("maxz",maxz,"maxi",maxi,"minz",minz)
+  # print("maxz",maxz,"maxi",maxi,"minz",minz)
 
   axis_charge_min = max(0,minz-1)
   axis_charge_max = maxz+1
@@ -136,11 +139,13 @@ def plot_3d_spectrum(pidx, sidx, deconv_spectra, vis_dict):
     return dummy_3d_fig()
 
   explicit_cmapping = {'noise': 'lightcoral', 'isomatch':'mediumblue'}  # https://holoviews.org/user_guide/Styling_Plots.html
-  fig = hv.Path3D(hv_vis_peaks, vdims='type').opts(azimuth=40, elevation=20)\
+  fig = hv.Path3D(hv_vis_peaks, vdims='type')\
+    .opts(azimuth=azimuth, elevation=elevation)\
     .opts(color='type', cmap=explicit_cmapping)\
     .opts(xlim=(axis_charge_min,axis_charge_max),xticks=list(range(axis_charge_min,axis_charge_max+1)))
   # fog = hv.Scatter3D(iso_traces).opts(c='grey', s=.1, azimuth=40, elevation=20, alpha=0.1)
-  fug = hv.Path3D(averagine_peaks).opts(color='black', linestyle='dashed', linewidth=.6, azimuth=40, elevation=20)  #, alpha=0.1
+  fug = hv.Path3D(averagine_peaks).opts(azimuth=azimuth, elevation=elevation)\
+    .opts(color='black', linestyle='dashed', linewidth=.6)  #, alpha=0.1
   fig_fin = (fug*fig).opts(
               ylabel="Mass",
               xlabel="Charge",

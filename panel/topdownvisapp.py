@@ -216,6 +216,7 @@ trigger_wf_btn.on_click(trigger_wf_func)
 
 resultoverview = pn.pane.Markdown(object=default_ro)
 current_spec_idx = None
+current_peak_idx = None
 
 mztab_button = pn.widgets.Button(name='download mzTab', width=50, disabled=True)
 
@@ -252,16 +253,19 @@ peak_name = pn.pane.Markdown(object="No peak selected.")
 
 def peak_tbl_click(*events):
     global result_panel
+    global current_peak_idx
+    if events:
+        event = events[-1]
+        current_peak_idx = event.row
     rpp = result_panel[0][2]
-    event = events[-1]
-    # print('peak_tbl_click', event.row, current_spec_idx) 
-    peak_name.object = peak_detail_msg(event.row,current_spec_idx)
-
+    peak_name.object = peak_detail_msg(current_peak_idx, current_spec_idx)
     with pn.param.set_values(rpp, loading=True):
-        spectra_fig = ppu.plot_3d_spectrum(pidx=event.row, 
+        spectra_fig = ppu.plot_3d_spectrum(pidx=current_peak_idx, 
             sidx=current_spec_idx, 
             vis_dict=workflow_result_store.vis_dict,
-            deconv_spectra=workflow_result_store.deconv_spectra)
+            deconv_spectra=workflow_result_store.deconv_spectra,
+            azimuth=azi_slider.value,
+            elevation=ele_slider.value)
         rpp = spectra_fig
         result_panel[0][2] = rpp
         #TODO replace result_panel[M] (3d) with named element replace with .object?
@@ -289,6 +293,15 @@ def id_tbl_click(*events):
 
 id_tbl.on_click(id_tbl_click) 
 
+azi_slider = pn.widgets.IntSlider(name='3D peak plot Azimuth', start=0, end=180, step=5, value=40, value_throttled=(1, 45))
+ele_slider = pn.widgets.IntSlider(name='3D peak plot Elevation', start=0, end=90, step=5, value=20, value_throttled=(1, 20))
+
+def update_peak_plot_aspect(value):
+    peak_tbl_click()
+
+pn.bind(update_peak_plot_aspect, value=azi_slider.param.value_throttled, watch=True)
+pn.bind(update_peak_plot_aspect, value=ele_slider.param.value_throttled, watch=True)
+
 # ===
 # LAYOUT
 # ===
@@ -296,6 +309,8 @@ id_tbl.on_click(id_tbl_click)
 sidebar = pn.Column(
     pn.Row(spectra_tbl),
     pn.Row(mztab_button),
+    pn.Row(azi_slider),
+    pn.Row(ele_slider),
 ).servable(target='sidebar')
 
 input_panel = pn.Column(
