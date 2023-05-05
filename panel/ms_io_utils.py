@@ -168,17 +168,18 @@ def acquire_targets_per_spectrum(deconv_spectrum: Dict[str,Any], source_spectrum
       )
   return target_matches
 
-def load_mzml(base_dir):
-  spec_paths = [f for f in os.listdir(base_dir) if f.endswith('.mzML')]
-  comprefina = os.path.commonprefix(spec_paths)
-  print(comprefina)
-  with mzml.read(os.path.join(base_dir, comprefina + "deconv.mzML")) as reader:
+def load_mzml(base_dir, common_prefix=None, suffix_pair=("deconv.mzML","annot.mzML")):
+  if not common_prefix:
+    spec_paths = [f for f in os.listdir(base_dir) if f.endswith('.mzML')]
+    common_prefix = os.path.commonprefix(spec_paths)
+  # print(common_prefix)
+  with mzml.read(os.path.join(base_dir, common_prefix + suffix_pair[0])) as reader:
     deconv_spectra = {spectrum['id']: spectrum for spectrum in reader}
 
-  with mzml.read(os.path.join(base_dir + comprefina + "annot.mzML")) as reader:
+  with mzml.read(os.path.join(base_dir + common_prefix + suffix_pair[1])) as reader:
     annot_spectra = {spectrum['id']:spectrum for spectrum in reader}
   
-  run_name = os.path.basename(comprefina).rstrip('_')
+  run_name = os.path.basename(common_prefix).rstrip('_')
 	
   vis_dict = dict()  # is a dict of spectrum id ('controllerType=0 .. scan=101') to list of corresponding TargetRefs
   for spectrum_id in set(deconv_spectra.keys()).intersection(set(annot_spectra.keys())):
