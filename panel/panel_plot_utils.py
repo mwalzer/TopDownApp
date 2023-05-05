@@ -25,8 +25,11 @@ def plot_2d_spectra(sidx, annot_spectra, deconv_spectra):
   fig_o = hv.Spikes(peak_coord).opts(color='blue', title="Original Spectrum {}".format(spectrum["id"]))
   fig_s = fig_o.opts(aspect=3, padding=0.1) + fig_d.opts(aspect=3, padding=0.1)
   # fig_s = fig_o.opts(aspect=2, padding=0.10) + fig_d.opts(aspect=2, padding=0.1)
-  fig_s.opts(aspect_weight=True, tight=False, fig_inches=300, fig_size=3).cols(1)
-  # fig_s.opts(aspect_weight=True, tight=False).cols(1)
+  fig_s.opts(aspect_weight=True, tight=False, fig_inches=300, fig_size=3, sublabel_format="").cols(1)
+  # should be a panel docu issue, since documentation notebooks suggest otherwise/inconsistent between backends:
+  # https://stackoverflow.com/questions/58327100/remove-letter-labels-on-holoviews-figures-with-matplotlib-backend
+  # https://www.holoviews.org/user_guide/Customizing_Plots.html?highlight=combine 
+  # https://holoviews.org/user_guide/Plotting_with_Matplotlib.html 
   return fig_s
 
 

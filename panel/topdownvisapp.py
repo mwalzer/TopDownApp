@@ -106,7 +106,6 @@ def update_resultoverview():
     sidebar[1] = mztab_button
     id_tbl.value = workflow_result_store.id_dfs['prsms'][['sequence','search_engine_score[2]','search_engine','charge','accession', 'opt_prsm_precursormass','opt_prsm_fragments_matched','spectra_ref']]
 
-
 def update_spectra_tbl():
     spec_df = pd.DataFrame({
         # 'Idx': [s['index'] for s in workflow_result_store.deconv_spectra],
@@ -127,7 +126,7 @@ def trigger_wf_func(event):
     result_panel.visible = True
 
     print("Analysing data")
-    # TODO move hardcode-paths to config
+    # TODO move hardcode-paths to config of configs
     analysis_pipeline = nextflow.Pipeline(
         "/opt/app/wf/topdown_local.nf", 
         config="/opt/app/wf/nf.config"
