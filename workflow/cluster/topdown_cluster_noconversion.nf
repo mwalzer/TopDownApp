@@ -22,8 +22,8 @@ To-Dos:
  * Setup of config and vars
  */
 params.mzML_file = params.mzML_file ?: { log.error "No mzML file provided. Make sure you have used the '--mzML_file' option."; exit 1 }()
-params.fasta_file = params.fasta_file ?: { log.error "No fasta file provided. Make sure you have used the '--fasta_file' option."; exit 1 }()
-params.mods_file = params.mods_file ?: { log.error "No mods file provided. Make sure you have used the '--mods_file' option."; exit 1 }()
+params.fasta = params.fasta ?: { log.error "No fasta file provided. Make sure you have used the '--fasta' option."; exit 1 }()
+params.mods = params.mods ?: { log.error "No mods file provided. Make sure you have used the '--mods' option."; exit 1 }()
 params.outdir = params.outdir ?: { log.warn "No output directory provided. Will put the results into './results'"; return "./results" }()
 mzML_file = file(params.mzML_file)
 fasta_file = file(params.fasta_file)
@@ -96,8 +96,9 @@ process TopPIC{
 
     input:
     file msalign_file from deconv_spectra_channel_msalign.flatten()
-    file msfeat_file from deconv_spectra_channel_feats.flatten()
-    // the tiniest issue with the feature file will make toppic dump core (say, like the ms1 features are contained in there too ...)
+    file ms1feat_file from deconv_spectra_channel_feats_ms1.flatten()
+    file ms2feat_file from deconv_spectra_channel_feats_ms2.flatten()
+        // the tiniest issue with the feature file will make toppic dump core (say, like the ms1 features are contained in there too ...)
 
     output:
     file "*_proteoform_single.tsv" into id_prtf_channel
@@ -105,7 +106,8 @@ process TopPIC{
 
     script:
     """
-    toppic -d -t FDR -T FDR -u 2 -g -i ${params.mods_file} ${params.fasta_file} $msalign_file
+    cp ${params.fasta} ${fasta_file.baseName}.fasta
+    toppic -d -t FDR -T FDR -u 2 -g -i ${params.mods} ${fasta_file.baseName}.fasta $msalign_file
     """
     // unless both file variables are mentioned and used the files don't get staged 
     // probably also something like # echo ${fasta_file.baseName} | cut -c1-25 as TopPic is sensitive to long filenames

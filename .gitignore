@@ -4,6 +4,8 @@
 **/*.simg
 **/*.mzML
 **/*.gz
+**/.mypy_cache
+**/__pycache__
 
 .vscode
 .devcontainer
