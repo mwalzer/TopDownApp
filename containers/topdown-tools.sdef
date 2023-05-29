@@ -6,7 +6,7 @@ includecmd: yes
 #===
 %environment
 #===
-    export PATH="/opt/thirdparty/LuciPHOr2:/thirdparty/MSGFPlus:/opt/thirdparty/Sirius:/opt/thirdparty/ThermoRawFileParser:/opt/thirdparty/Comet:/opt/thirdparty/Fido:/opt/thirdparty/MaRaCluster:/opt/thirdparty/MyriMatch:/opt/thirdparty/OMSSA:/opt/thirdparty/Percolator:/opt/thirdparty/SpectraST:/opt/thirdparty/XTandem:/opt/thirdparty/crux:${PATH}"
+	export PATH="/opt/thirdparty/LuciPHOr2:/thirdparty/MSGFPlus:/opt/thirdparty/Sirius:/opt/thirdparty/ThermoRawFileParser:/opt/thirdparty/Comet:/opt/thirdparty/Fido:/opt/thirdparty/MaRaCluster:/opt/thirdparty/MyriMatch:/opt/thirdparty/OMSSA:/opt/thirdparty/Percolator:/opt/thirdparty/SpectraST:/opt/thirdparty/XTandem:/opt/thirdparty/crux:${PATH}"
 	export PATH=/opt/flashdeconv/bin/:${PATH}
 	export LD_LIBRARY_PATH=/opt/flashdeconv/lib/:${LD_LIBRARY_PATH}
 	export OPENMS_DATA_PATH=/OpenMS/share/OpenMS
