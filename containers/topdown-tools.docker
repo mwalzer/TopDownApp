@@ -1,0 +1,123 @@
+FROM quay.io/mwalzer/topdownapp:tda-raw-latest 
+# includecmd: yes
+
+#===
+#%environment
+#===
+ENV	DEBIAN_FRONTEND noninteractive 
+ENV	LANG C.UTF-8
+ENV	LC_ALL C.UTF-8
+
+ENV	PATH=/usr/local/bin/:${PATH}
+ENV	PATH="/opt/thirdparty/LuciPHOr2:/thirdparty/MSGFPlus:/opt/thirdparty/Sirius:/opt/thirdparty/ThermoRawFileParser:/opt/thirdparty/Comet:/opt/thirdparty/Fido:/opt/thirdparty/MaRaCluster:/opt/thirdparty/MyriMatch:/opt/thirdparty/OMSSA:/opt/thirdparty/Percolator:/opt/thirdparty/SpectraST:/opt/thirdparty/XTandem:/opt/thirdparty/crux:${PATH}"
+ENV	PATH=/opt/flashdeconv/bin/:${PATH}
+ENV	LD_LIBRARY_PATH=/opt/flashdeconv/lib/:${LD_LIBRARY_PATH}
+ENV	OPENMS_DATA_PATH=/OpenMS/share/OpenMS
+ENV	PATH=/opt/toppic/toppic/usr/bin/:${PATH}
+
+#===
+%files 
+#===
+COPY    ../mzTab/export_mztab.py /opt/app/export_mztab.py
+	
+#===
+%post
+#===
+RUN	export FD_url=https://abibuilder.informatik.uni-tuebingen.de/archive/openms/OpenMSInstaller/experimental/feature/FLASHDeconv/OpenMS-2.7.0-src.tar.gz
+	#	FD_url=https://abibuilder.informatik.uni-tuebingen.de/archive/openms/OpenMSInstaller/experimental/feature/FLASHDeconv/OpenMS-3.0.0-src.tar.gz  # this one doesn't build
+RUN	export TP_url=https://github.com/toppic-suite/toppic-suite/archive/refs/tags/v1.5.3.zip
+	
+#---
+# install dependencies
+#---
+RUN	apt update
+RUN	apt install -q --assume-yes wget unzip 
+RUN	apt install -q --assume-yes build-essential catch autoconf patch libtool git automake vim
+RUN	apt install -q --assume-yes zlib1g-dev libxerces-c-dev libboost-filesystem-dev \
+						libboost-program-options-dev libboost-system-dev libboost-thread-dev \
+						libboost-iostreams-dev libboost-chrono-dev libeigen3-dev \
+						nlohmann-json3-dev qtbase5-dev openssl libssl-dev
+RUN	apt install -q --assume-yes libqt5svg5-dev libqt5opengl5-dev\
+						libeigen3-dev libsqlite3-dev libwildmagic-dev libboost-random-dev \
+                        libboost-regex-dev libboost-iostreams-dev libboost-date-time-dev \
+                        libboost-math-dev libxerces-c-dev libglpk-dev zlib1g-dev libsvm-dev \
+                        libbz2-dev seqan-dev coinor-libcoinmp-dev libhdf5-dev
+RUN	apt install -q --assume-yes wget default-jre
+RUN	pip install --upgrade pip
+RUN	pip install numpy pandas tables scipy pyteomics
+
+#---
+# cmake
+#---
+RUN	wget https://www.cmake.org/files/v3.25/cmake-3.25.2.tar.gz
+RUN	tar xf cmake-3.25.2.tar.gz
+RUN	cd cmake-3.25.2
+RUN	./bootstrap
+RUN	make
+RUN	make install
+RUN	cmake --version
+	
+#---
+# OMS contrib
+#---
+	#get src and build
+RUN	cd /opt/
+RUN	git clone --depth 1 --branch 'Release2.7.0' --single-branch https://github.com/OpenMS/contrib.git
+
+RUN	mkdir contrib-build &&
+		cd contrib-build &&
+		cmake -DBUILD_TYPE=WILDMAGIC ../contrib && rm -rf archives src &&
+		cmake -DBUILD_TYPE=EIGEN ../contrib && rm -rf archives src &&
+		cmake -DBUILD_TYPE=COINOR ../contrib && rm -rf archives src &&
+		cmake -DBUILD_TYPE=SQLITE ../contrib && rm -rf archives src &&
+		rm -rf contrib
+
+	# patch with thirdparty executables
+RUN	cd /opt/ 
+RUN	git clone --depth 1 --branch 'Release2.7.0' --single-branch https://github.com/OpenMS/THIRDPARTY.git
+
+RUN	mkdir thirdparty  &&
+		cp -r THIRDPARTY/All/* /opt/thirdparty/ &&
+		cp -r THIRDPARTY/Linux/64bit/* /opt/thirdparty/ &&
+		rm -rf THIRDPARTY
+	
+#---
+# FLASHDeconv
+#---
+	# get src
+	#TEMP_FD=$(mktemp)
+	#wget -O $TEMP_FD $FD_url &&
+	#	mkdir /opt/flashdeconv_src &&
+    #    tar xf $TEMP_FD -C /opt/flashdeconv_src &&
+    #    rm -f $TEMP_FD
+		
+RUN mkdir /opt/flashdeconv_src &&
+        mkdir /opt/flashdeconv && 
+        cd /opt/flashdeconv_src
+    #git clone --depth 1 --branch 'feature/FLASHDeconv' --single-branch https://github.com/JeeH-K/OpenMS.git .
+RUN	git clone --depth 1 --branch 'feature/FLASHDeconvDevelop' --single-branch https://github.com/JeeH-K/OpenMS.git .
+
+    #    cd $(ls -d */|head -n 1)
+RUN	cmake -DOPENMS_CONTRIB_LIBS="/opt/contrib-build" -DBOOST_USE_STATIC=OFF -DCMAKE_INSTALL_PREFIX=/opt/flashdeconv . 
+RUN	make -j$(nproc) TOPP && make -j$(nproc) UTILS && make install && rm -rf /opt/flashdeconv_src
+	# -j  seems not to be working - build single thread now test later
+
+#---
+# TopPic
+#--
+	# get src
+RUN	cd /tmp/
+RUN	export TEMP_TP=$(mktemp) 
+RUN	wget -O $TEMP_TP $TP_url &&
+		unzip -d /opt/toppic_src $TEMP_TP &&
+		rm -f $TEMP_TP 
+
+	# build TopPic
+RUN	cd /opt/toppic_src/ &&
+		cd $(ls -d */|head -n 1) &&
+		mkdir build &&
+		cd build &&
+		cmake .. &&
+		make -j$(nproc) &&
+		make install DESTDIR=/opt/toppic
+
