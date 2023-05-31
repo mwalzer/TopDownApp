@@ -1,6 +1,7 @@
 FROM mwalzer/topdownapp:tda-raw-latest 
 # includecmd: yes
 
+#DOCKER_BUILDKIT=0 docker build -t mwalzer/topdownapp:tda-tools-latest -f containers/topdown-tools.docker .
 #===
 #%environment
 #===
@@ -18,7 +19,7 @@ ENV	PATH=/opt/toppic/toppic/usr/bin/:${PATH}
 #===
 #%files 
 #===
-COPY    mzTab/export_mztab.py /opt/app/export_mztab.py
+COPY	mzTab/export_mztab.py /opt/app/export_mztab.py
 	
 #===
 #%post
@@ -49,10 +50,12 @@ RUN	pip install numpy pandas tables scipy pyteomics
 #---
 # cmake
 #---
-RUN	wget https://www.cmake.org/files/v3.25/cmake-3.25.2.tar.gz
-RUN	tar xf cmake-3.25.2.tar.gz
-RUN	cd cmake-3.25.2
-RUN	./bootstrap
+WORKDIR	/opt/
+RUN	wget -O cmake-3.25.2.tar.gz https://www.cmake.org/files/v3.25/cmake-3.25.2.tar.gz
+RUN	tar -zxzf cmake-3.25.2.tar.gz
+RUN ls -lah > /tmp/foo.txt
+WORKDIR /opt/cmake-3.25.2
+RUN	bash bootstrap
 RUN	make
 RUN	make install
 RUN	cmake --version
@@ -60,45 +63,31 @@ RUN	cmake --version
 #---
 # OMS contrib
 #---
-	#get src and build
-RUN	cd /opt/
+WORKDIR	/opt/
 RUN	git clone --depth 1 --branch 'Release2.7.0' --single-branch https://github.com/OpenMS/contrib.git
 
-RUN	mkdir contrib-build && cd contrib-build && cmake -DBUILD_TYPE=WILDMAGIC ../contrib && rm -rf archives src && cmake -DBUILD_TYPE=EIGEN ../contrib && rm -rf archives src && cmake -DBUILD_TYPE=COINOR ../contrib && rm -rf archives src && cmake -DBUILD_TYPE=SQLITE ../contrib && rm -rf archives src && rm -rf contrib
-
-	# patch with thirdparty executables
-RUN	cd /opt/ 
+RUN	mkdir contrib-build 
+WORKDIR	contrib-build 
+RUN	cmake -DBUILD_TYPE=WILDMAGIC ../contrib && rm -rf archives src && cmake -DBUILD_TYPE=EIGEN ../contrib && rm -rf archives src && cmake -DBUILD_TYPE=COINOR ../contrib && rm -rf archives src && cmake -DBUILD_TYPE=SQLITE ../contrib && rm -rf archives src && rm -rf contrib
+WORKDIR /opt/ 
 RUN	git clone --depth 1 --branch 'Release2.7.0' --single-branch https://github.com/OpenMS/THIRDPARTY.git
-
 RUN	mkdir thirdparty  && cp -r THIRDPARTY/All/* /opt/thirdparty/ && cp -r THIRDPARTY/Linux/64bit/* /opt/thirdparty/ && rm -rf THIRDPARTY
 	
 #---
 # FLASHDeconv
-#---
-	# get src
-	#TEMP_FD=$(mktemp)
-	#wget -O $TEMP_FD $FD_url &&
-	#	mkdir /opt/flashdeconv_src &&
-    #    tar xf $TEMP_FD -C /opt/flashdeconv_src &&
-    #    rm -f $TEMP_FD
-		
+#---		
 RUN mkdir /opt/flashdeconv_src && mkdir /opt/flashdeconv && cd /opt/flashdeconv_src
-    #git clone --depth 1 --branch 'feature/FLASHDeconv' --single-branch https://github.com/JeeH-K/OpenMS.git .
 RUN	git clone --depth 1 --branch 'feature/FLASHDeconvDevelop' --single-branch https://github.com/JeeH-K/OpenMS.git .
-
-    #    cd $(ls -d */|head -n 1)
 RUN	cmake -DOPENMS_CONTRIB_LIBS="/opt/contrib-build" -DBOOST_USE_STATIC=OFF -DCMAKE_INSTALL_PREFIX=/opt/flashdeconv . 
 RUN	make -j$(nproc) TOPP && make -j$(nproc) UTILS && make install && rm -rf /opt/flashdeconv_src
-	# -j  seems not to be working - build single thread now test later
 
 #---
 # TopPic
 #--
-	# get src
-RUN	cd /tmp/
+WORKDIR	/tmp/
 ARG	TEMP_TP=$(mktemp) 
 RUN	wget -O $TEMP_TP $TP_url && unzip -d /opt/toppic_src $TEMP_TP && rm -f $TEMP_TP 
-
-	# build TopPic
-RUN	cd /opt/toppic_src/ && cd $(ls -d */|head -n 1) && mkdir build && cd build && cmake .. && make -j$(nproc) && make install DESTDIR=/opt/toppic
+WORKDIR /opt/toppic_src/ 
+WORKDIR $(ls -d */|head -n 1) 
+RUN mkdir build && cd build && cmake .. && make -j$(nproc) && make install DESTDIR=/opt/toppic
 

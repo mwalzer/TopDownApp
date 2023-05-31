@@ -1,4 +1,4 @@
-FROM quay.io/mwalzer/topdownapp:tda-tools-latest 
+FROM mwalzer/topdownapp:tda-tools-latest 
 # includecmd: yes
 
 #===
@@ -16,19 +16,19 @@ CMD ["/opt/app/topdownvisapp.py"]
 #===
 #%files 
 #===
-COPY    ../panel/topdownvisapp.py /opt/app/topdownvisapp.py
-COPY    ../panel/requirements.txt /opt/app/requirements.txt
-COPY    ../panel/panel_plot_utils.py /opt/app/panel_plot_utils.py
-COPY    ../panel/ms_io_utils.py /opt/app/ms_io_utils.py
-COPY    ../workflow/topdown_local.nf /opt/app/wf/topdown_local.nf
-COPY    ../workflow/nf.config /opt/app/wf/nf.config
-COPY    ../config/common_mods_OxMethPhos.txt /opt/app/modconf/common_mods_OxMethPhos.txt
-COPY    ../config/common_mods_OxMethAcetPhos.txt /opt/app/modconf/common_mods_OxMethAcetPhos.txt
-COPY    ../config/common_mods_OxMethAcet.txt /opt/app/modconf/common_mods_OxMethAcet.txt
-COPY    ../config/common_mods_OxMeth.txt /opt/app/modconf/common_mods_OxMeth.txt
-COPY    ../config/common_mods_Ox.txt /opt/app/modconf/common_mods_Ox.txt
-COPY    ../config/common_mods_Meth.txt /opt/app/modconf/common_mods_Meth.txt
-COPY    ../mzTab/export_mztab.py /opt/app/export_mztab.py
+COPY    panel/topdownvisapp.py /opt/app/topdownvisapp.py
+COPY    panel/requirements.txt /opt/app/requirements.txt
+COPY    panel/panel_plot_utils.py /opt/app/panel_plot_utils.py
+COPY    panel/ms_io_utils.py /opt/app/ms_io_utils.py
+COPY    workflow/topdown_local.nf /opt/app/wf/topdown_local.nf
+COPY    workflow/nf.config /opt/app/wf/nf.config
+COPY    config/common_mods_OxMethPhos.txt /opt/app/modconf/common_mods_OxMethPhos.txt
+COPY    config/common_mods_OxMethAcetPhos.txt /opt/app/modconf/common_mods_OxMethAcetPhos.txt
+COPY    config/common_mods_OxMethAcet.txt /opt/app/modconf/common_mods_OxMethAcet.txt
+COPY    config/common_mods_OxMeth.txt /opt/app/modconf/common_mods_OxMeth.txt
+COPY    config/common_mods_Ox.txt /opt/app/modconf/common_mods_Ox.txt
+COPY    config/common_mods_Meth.txt /opt/app/modconf/common_mods_Meth.txt
+COPY    mzTab/export_mztab.py /opt/app/export_mztab.py
 
 #===
 #%post
@@ -51,19 +51,20 @@ RUN	pip install panel holoviews alphapept
 #---
 # inception
 #--
-RUN export SING_url=https://github.com/singularityware/singularity/releases/download/v3.5.3/singularity-3.5.3.tar.gz
+WORKDIR /opt/
+ENV	SING_url=https://github.com/singularityware/singularity/releases/download/v3.5.3/singularity-3.5.3.tar.gz
 RUN	apt install -y build-essential \
 		libssl-dev uuid-dev libgpgme11-dev squashfs-tools \
 		libseccomp-dev wget pkg-config git cryptsetup debootstrap
 	
 RUN	wget https://dl.google.com/go/go1.13.linux-amd64.tar.gz
 RUN	tar --directory=/usr/local -xzvf go1.13.linux-amd64.tar.gz
-RUN	export PATH=/usr/local/go/bin:$PATH
+ENV	PATH=/usr/local/go/bin:$PATH
 RUN	wget $SING_url
 RUN	tar -xzvf singularity-3.5.3.tar.gz
-RUN	cd singularity
-RUN	./mconfig --without-suid
-RUN	cd builddir
+WORKDIR /opt/singularity
+RUN	bash ./mconfig --without-suid
+WORKDIR /opt/singularity/builddir
 RUN	make
 RUN	make install
 
