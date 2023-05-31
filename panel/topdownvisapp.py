@@ -8,6 +8,8 @@ from typing import List,Dict,Any
 from ms_io_utils import load_mzml, load_ids, AppInputs, WorkflowResults
 import panel_plot_utils as ppu
 import holoviews as hv
+import shutil, os
+
 
 # font_url="https://fonts.googleapis.com/css?family=Open+Sans"
 # # template=pn.template.FastListTemplate(font_url="https://fonts.googleapis.com/css?family=Open+Sans")
@@ -117,6 +119,20 @@ def update_spectra_tbl():
     spec_df.Scan = spec_df.Scan.str.extract(r'scan=(\d+)')
     spectra_tbl.value = spec_df
 
+params_tbl = pn.widgets.Tabulator(
+        pd.read_csv('config/workflow_params.conf.tsv.csv', sep='\t'),  #'Name', 'Value', 'Description']),
+        height=300,
+        disabled=False,
+        sizing_mode='stretch_width',
+        pagination='local',
+)
+
+def param_tab_edit(event):
+    print(f'Clicked cell in {event.column!r} column, row {event.row!r} with value {event.value!r}')
+    print(params_tbl.value.Value.iloc[0])
+
+params_tbl.on_click(param_tab_edit)
+
 def trigger_wf_func(event):
     global workflow_result_store
     print('Clicked wf_btn {0} times'.format(trigger_wf_btn.clicks))
@@ -125,20 +141,31 @@ def trigger_wf_func(event):
     input_panel.visible = False
     result_panel.visible = True
 
+
     print("Analysing data")
     # TODO move hardcode-paths to config of configs
     analysis_pipeline = nextflow.Pipeline(
-        "/opt/app/wf/topdown_local.nf", 
+        "workflow/local/topdown_params.nf",
+        # "/opt/app/wf/topdown_local.nf",  # /home/walzer/ms-tools/TopDown/data/TopPIC_tutorial
         config="/opt/app/wf/nf.config"
     )
+
+    shutil.rmtree(BASE_DIR, ignore_errors=True)
+    os.mkdir(BASE_DIR)
+    print(analysis_pipeline)
 
     with pn.param.set_values(result_panel, loading=True):
         # ?! this is a blocking process - oh why?!
         apr = analysis_pipeline.run(params={
             "raw_file": input_path_store.raw_path, 
-            "fasta": input_path_store.fasta_path,
-            "mods": "/opt/app/modconf/" + mods_radio_group.value, 
+            "fasta_file": input_path_store.fasta_path,
+            "mods": "/opt/app/modconf/" + mods_radio_group.value,
+            "prsm_fdr": str(params_tbl.value.Value.iloc[0]),
+            "prsm_typ": str(params_tbl.value.Value.iloc[1]),
+            "outdir": BASE_DIR
         })
+        print(analysis_pipeline.create_command_string)
+        
         # might be switched off for debugging
         print("Loading spectra")
         workflow_result_store = WorkflowResults(*load_mzml(BASE_DIR))
@@ -293,6 +320,7 @@ sidebar = pn.Column(
     pn.Row(mztab_button),
     pn.Row(azi_slider),
     pn.Row(ele_slider),
+    pn.Row(params_tbl),
 ).servable(target='sidebar')
 
 input_panel = pn.Column(
