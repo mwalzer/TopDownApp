@@ -1,0 +1,50 @@
+FROM mwalzer/topdownapp:tda-tools-latest 
+# includecmd: yes
+
+#===
+#%environment
+#===
+ENV	DEBIAN_FRONTEND noninteractive 
+ENV	LANG C.UTF-8
+ENV	LC_ALL C.UTF-8
+
+#===
+#%runscript
+#===
+CMD ["python", "/usr/local/bin/panel", "serve", "/opt/app/topdownvisapp.py"]
+
+#===
+#%files 
+#===
+COPY    panel/topdownvisapp.py /opt/app/topdownvisapp.py
+COPY    panel/requirements.txt /opt/app/requirements.txt
+COPY    panel/panel_plot_utils.py /opt/app/panel_plot_utils.py
+COPY    panel/ms_io_utils.py /opt/app/ms_io_utils.py
+COPY    workflow/topdown_local.nf /opt/app/wf/topdown_local.nf
+COPY    config/nf.config /opt/app/wf/nf.config
+COPY    config/common_mods_OxMethPhos.txt /opt/app/modconf/common_mods_OxMethPhos.txt
+COPY    config/common_mods_OxMethAcetPhos.txt /opt/app/modconf/common_mods_OxMethAcetPhos.txt
+COPY    config/common_mods_OxMethAcet.txt /opt/app/modconf/common_mods_OxMethAcet.txt
+COPY    config/common_mods_OxMeth.txt /opt/app/modconf/common_mods_OxMeth.txt
+COPY    config/common_mods_Ox.txt /opt/app/modconf/common_mods_Ox.txt
+COPY    config/common_mods_Meth.txt /opt/app/modconf/common_mods_Meth.txt
+COPY    mzTab/export_mztab.py /opt/app/export_mztab.py
+
+#===
+#%post
+#===
+
+#---
+# install dependencies
+#---
+#RUN	apt update
+RUN	apt install -q --assume-yes wget default-jre
+RUN	pip install --upgrade pip
+
+#---
+# panel and nextflow
+#---
+RUN	pip install "nextflow<23"
+RUN	nextflow info
+RUN	pip install -r /opt/app/requirements.txt
+WORKDIR	/opt/

@@ -7,7 +7,7 @@ includecmd: yes
 %environment
 #===
 	export PATH=/usr/local/bin/:${PATH}
- 
+
 #===
 %post
 #===
