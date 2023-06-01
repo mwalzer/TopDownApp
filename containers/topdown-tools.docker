@@ -87,8 +87,8 @@ RUN	make -j$(nproc) TOPP && make -j$(nproc) UTILS && make install && rm -rf /opt
 #--
 WORKDIR	/tmp/
 ARG	TEMP_TP=$(mktemp) 
-RUN	wget -O $TEMP_TP $TP_url && unzip -d /opt/toppic_src $TEMP_TP && rm -f $TEMP_TP 
-WORKDIR /opt/toppic_src/ 
-WORKDIR $(ls -d */|head -n 1) 
-RUN mkdir build && cd build && cmake .. && make -j$(nproc) && make install DESTDIR=/opt/toppic
+RUN	wget -O $TEMP_TP $TP_url && unzip -d /tmp/toppic_src $TEMP_TP && rm -f $TEMP_TP 
+RUN	mkdir -p /tmp/toppic_build 
+WORKDIR	/tmp/toppic_build
+RUN	cmake $(ls -d /tmp/toppic_src/*|head -n 1) && make -j$(nproc) && make install DESTDIR=/opt/toppic && rm -rf /tmp/toppic* $TEMP_TP
 
