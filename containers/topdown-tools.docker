@@ -76,8 +76,9 @@ RUN	mkdir thirdparty  && cp -r THIRDPARTY/All/* /opt/thirdparty/ && cp -r THIRDP
 #---
 # FLASHDeconv
 #---		
-RUN mkdir /opt/flashdeconv_src && mkdir /opt/flashdeconv && cd /opt/flashdeconv_src
-RUN	git clone --depth 1 --branch 'feature/FLASHDeconvDevelop' --single-branch https://github.com/JeeH-K/OpenMS.git .
+RUN mkdir /opt/flashdeconv_src && mkdir /opt/flashdeconv 
+WORKDIR	/opt/flashdeconv_src
+RUN	git clone --depth 1 --branch 'FLASHDeconvFix' --single-branch https://github.com/JeeH-K/OpenMS.git .
 RUN	cmake -DOPENMS_CONTRIB_LIBS="/opt/contrib-build" -DBOOST_USE_STATIC=OFF -DCMAKE_INSTALL_PREFIX=/opt/flashdeconv . 
 RUN	make -j$(nproc) TOPP && make -j$(nproc) UTILS && make install && rm -rf /opt/flashdeconv_src
 
