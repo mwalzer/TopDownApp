@@ -91,4 +91,4 @@ RUN	wget -O $TEMP_TP $TP_url && unzip -d /tmp/toppic_src $TEMP_TP && rm -f $TEMP
 RUN	mkdir -p /tmp/toppic_build 
 WORKDIR	/tmp/toppic_build
 RUN	cmake $(ls -d /tmp/toppic_src/*|head -n 1) && make -j$(nproc) && make install DESTDIR=/opt/toppic && rm -rf /tmp/toppic* $TEMP_TP
-
+WORKDIR	/opt/

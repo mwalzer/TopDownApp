@@ -7,11 +7,11 @@ FROM mwalzer/topdownapp:tda-tools-latest
 ENV	DEBIAN_FRONTEND noninteractive 
 ENV	LANG C.UTF-8
 ENV	LC_ALL C.UTF-8
+
 #===
 #%runscript
 #===
-ENTRYPOINT ["panel serve"]
-CMD ["/opt/app/topdownvisapp.py"]
+CMD ["python", "/usr/local/bin/panel", "serve", "/opt/app/topdownvisapp.py"]
 
 #===
 #%files 
@@ -21,7 +21,7 @@ COPY    panel/requirements.txt /opt/app/requirements.txt
 COPY    panel/panel_plot_utils.py /opt/app/panel_plot_utils.py
 COPY    panel/ms_io_utils.py /opt/app/ms_io_utils.py
 COPY    workflow/topdown_local.nf /opt/app/wf/topdown_local.nf
-COPY    workflow/nf.config /opt/app/wf/nf.config
+COPY    config/nf.config /opt/app/wf/nf.config
 COPY    config/common_mods_OxMethPhos.txt /opt/app/modconf/common_mods_OxMethPhos.txt
 COPY    config/common_mods_OxMethAcetPhos.txt /opt/app/modconf/common_mods_OxMethAcetPhos.txt
 COPY    config/common_mods_OxMethAcet.txt /opt/app/modconf/common_mods_OxMethAcet.txt
@@ -37,34 +37,14 @@ COPY    mzTab/export_mztab.py /opt/app/export_mztab.py
 #---
 # install dependencies
 #---
-RUN	apt update
+#RUN	apt update
 RUN	apt install -q --assume-yes wget default-jre
 RUN	pip install --upgrade pip
-	
+
 #---
 # panel and nextflow
 #---
 RUN	pip install "nextflow<23"
 RUN	nextflow info
-RUN	pip install panel holoviews alphapept
-
-#---
-# inception
-#--
-WORKDIR /opt/
-ENV	SING_url=https://github.com/singularityware/singularity/releases/download/v3.5.3/singularity-3.5.3.tar.gz
-RUN	apt install -y build-essential \
-		libssl-dev uuid-dev libgpgme11-dev squashfs-tools \
-		libseccomp-dev wget pkg-config git cryptsetup debootstrap
-	
-RUN	wget https://dl.google.com/go/go1.13.linux-amd64.tar.gz
-RUN	tar --directory=/usr/local -xzvf go1.13.linux-amd64.tar.gz
-ENV	PATH=/usr/local/go/bin:$PATH
-RUN	wget $SING_url
-RUN	tar -xzvf singularity-3.5.3.tar.gz
-WORKDIR /opt/singularity
-RUN	bash ./mconfig --without-suid
-WORKDIR /opt/singularity/builddir
-RUN	make
-RUN	make install
-
+RUN	pip install -r /opt/app/requirements.txt
+WORKDIR	/opt/

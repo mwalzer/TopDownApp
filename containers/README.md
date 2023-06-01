@@ -20,14 +20,20 @@ Note: You will need to change to the root directory of the repository to build t
 build example: `docker build -t topdownapp:tda-app-latest -f containers/topdown-app.docker .`
 
 ### Run in Stand-alone Mode 
+
 To simply run the TopDownApp, it is easiest to run the latest app container (tag tda-app-latest):
-`docker run quay.io/mwalzer/topdownapp:tda-app-latest`
+`docker run -p 5006:5006 -v <e.g. ~/TopDown/data/>:</opt/data/> mwalzer/topdownapp:tda-app-latest`
+This will map the port on which panel will serve the app from the container running to your host system.
+This will also add a 'volume' to the container, mapping `~/TopDown/data/` from your host system to `/opt/data/` in the container.
 
 ### Run in Development Mode
+
 For switching parameter setting files, tool versions, etc. it is simplest to also use the latest app container (tag tda-app-latest) but start into a command shell:
 `docker run -it quay.io/mwalzer/topdownapp:tda-app-latest bash`
 This will give you access to all workflows, configuration files (in `/opt/app/) and the Python Panel app, which you can start like so:
 `panel serve /opt/app/topdownvisapp.py`
+If you need the UI don't forget to specify port mapping and if you need data, add a volume. (For examples see above and Docker manual.)
 
 ### Structure
+
 The app container (tag `tda-app-latest`, container definition file `topdown-app`) is built ontop of the tools container (tag `tda-tools-latest`, container definition file `topdown-tools`) that is built ontop of the rawfile conversion container (tag `tda-raw-latest`, container definition file `topdown-raw`). This is to make all essential tools and scripts available from one container while keeping individual development contaienrs independent. As such, for cluster deployment, amongst others, this folder contains also individual tools container definitions.
