@@ -1,6 +1,0 @@
-allinone:
-  container: "/hps/nobackup/juan/pride/topdown/topdown-app:may23.simg"
-  memory: 8
-  maxRetries: 3
-fasta: "/hps/nobackup/juan/pride/topdown/BPA-reident/uniprot_human.fasta"
-mods: "/hps/nobackup/juan/pride/topdown/BPA-reident/common_mods_OxMeth.txt"
