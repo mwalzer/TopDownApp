@@ -9,10 +9,9 @@ nextflow.enable.dsl = 1
  Mathias Walzer <walzer@ebi.ac.uk>
 -----
 Pipeline overview:
-1. Mzml conversion
-2. Apply deconvolution
-3. Use search engine 
-4. Output - original analysis tsvs and a mzTab 
+1. Apply deconvolution
+2. Use search engine 
+3. Output - original analysis tsvs and a mzTab 
 -----
 To-Dos:
 (nice to have: flashIDA for data producers - for users that do their own data acquisition)
@@ -21,11 +20,11 @@ To-Dos:
 /*
  * Setup of config and vars
  */
-params.raw_file = params.raw_file ?: { log.error "No raw file provided. Make sure you have used the '--raw_file' option."; exit 1 }()
+params.mzML_file = params.mzML_file ?: { log.error "No mzML file provided. Make sure you have used the '--mzML_file' option."; exit 1 }()
 params.fasta_file = params.fasta_file ?: { log.error "No fasta file provided. Make sure you have used the '--fasta_file' option."; exit 1 }()
 params.mods = params.mods ?: { log.error "No mods file provided. Make sure you have used the '--mods' option."; exit 1 }()
 params.outdir = params.outdir ?: { log.warn "No output directory provided. Will put the results into '/tmp/results'"; return "/tmp/results" }()
-raw_file = file(params.raw_file)
+mzML_file = file(params.mzML_file)
 fasta_file = file(params.fasta_file)
 
 def helpMessage() {
@@ -46,30 +45,11 @@ if (params.help){
 
 
 /*
- * Generate the mzML + metadata for each RAW file
+ * SKIP Generate the mzML + metadata for each RAW file
  */
-process ConvertRaw {
-    //container '/home/walzer/other-tools/singularity_images/biocontainers-thermorawfileparser-1.2.3.simg'
-    memory { 4.GB * task.attempt }
-    errorStrategy 'retry'
-     
-    /*publishDir "${params.outdir}", mode: 'copy', overwrite: true*/
-  
-    input:
-    //file rawFile from "${params.raw_file}"
-    
-    output: 
-    file '*.mzML' into spectra_files_channel
- 
-    script:
-    """
-	echo ${params.raw_file}
-    ThermoRawFileParser.sh -i=$raw_file -f=2 -o=./
-    """
-}
 
 process FLASHDeconv{
-    //container '/home/walzer/ms-tools/TopDown/topdown-tools:mar23.simg'
+    // container "${params.allinone.container}"
     memory { 4.GB * task.attempt }
     publishDir "${params.outdir}", mode: 'copy', overwrite: true
  
@@ -78,25 +58,23 @@ process FLASHDeconv{
     errorStrategy 'retry'
  
     input:
-    file mzML_file from spectra_files_channel.flatten()
+    //file mzML_file from spectra_files_channel.flatten()
  
     // this will be multiple of each type per raw?
     output:
     file "*.msalign" into deconv_spectra_channel_msalign
     file "*.feature" into deconv_spectra_channel_feats
     file "*.mzML" into deconv_spectra_channel_mzmls
-	
-    // https://www.nextflow.io/docs/latest/channel.html#fromfilepairs
  
     script:
     """
     FLASHDeconv \
-       -in $mzML_file \
-       -out ${mzML_file.baseName}_fd.tsv \
-       -out_topFD ${mzML_file.baseName}.ms1_msalign ${mzML_file.baseName}.msalign \
-       -out_topFD_feature ${mzML_file.baseName}.ms1_feature ${mzML_file.baseName}.feature \
-       -out_mzml ${mzML_file.baseName}_fd_deconv.mzML \
-       -out_annotated_mzml ${mzML_file.baseName}_fd_annot.mzML
+       -in $params.mzML_file \
+       -out ${params.mzML_file}_fd.tsv \
+       -out_topFD ${params.mzML_file}.ms1_msalign ${params.mzML_file}.msalign \
+       -out_topFD_feature ${params.mzML_file}.ms1_feature ${params.mzML_file}.feature \
+       -out_mzml ${params.mzML_file}_fd_deconv.mzML \
+       -out_annotated_mzml ${params.mzML_file}_fd_annot.mzML
     """
 }
 
@@ -106,7 +84,7 @@ process FLASHDeconv{
  * 	         this node needs to do seemingly superfluous steps
  */
 process TopPIC{
-    //container '/home/walzer/ms-tools/TopDown/topdown-tools:mar23.simg'
+    // container "${params.allinone.container}"
     memory { 4.GB * task.attempt }
     
     publishDir "${params.outdir}", mode: 'copy', overwrite: true
@@ -134,7 +112,7 @@ process TopPIC{
  * Export TopPIC results to mzTab
  */
 process mzTab{
-    // container '/home/walzer/ms-tools/TopDown/topdown-tools:mar23.simg'
+    // container "${params.allinone.container}"
     memory { 4.GB * task.attempt }
     
     publishDir "${params.outdir}", mode: 'copy', overwrite: true
@@ -156,7 +134,3 @@ process mzTab{
     python3 /opt/app/export_mztab.py -s ${fasta_file} -p ${prsm_ids} -f ${proteoform_ids} -5 ${prsm_ids.baseName}.h5 ${prsm_ids.baseName}.mzTab
 	"""
 }
-
-
-
-
