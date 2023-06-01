@@ -128,15 +128,15 @@ def trigger_wf_func(event):
     print("Analysing data")
     # TODO move hardcode-paths to config of configs
     analysis_pipeline = nextflow.Pipeline(
-        "/opt/app/wf/topdown_local.nf", 
-        config="/opt/app/wf/nf.config"
+        "/opt/app/wf/topdown_local_app.nf", 
+        config="/opt/app/config/nf.config"
     )
 
     with pn.param.set_values(result_panel, loading=True):
         # ?! this is a blocking process - oh why?!
         apr = analysis_pipeline.run(params={
             "raw_file": input_path_store.raw_path, 
-            "fasta": input_path_store.fasta_path,
+            "fasta_file": input_path_store.fasta_path,
             "mods": "/opt/app/modconf/" + mods_radio_group.value, 
         })
         # might be switched off for debugging
@@ -187,7 +187,7 @@ default_ro = """No peak file loaded, no identifications available."""
 
 fileinputselections = pn.pane.Markdown(object=default_fipm)
 
-fise = pn.widgets.FileSelector('~/')
+fise = pn.widgets.FileSelector('/opt/')
 fise.param.watch(fileselect_callback, 'value', onlychanged=False)
 mods_radio_group = pn.widgets.RadioButtonGroup(
     name='Modifications Choice', options=MODS_IN, 

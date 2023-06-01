@@ -21,14 +21,15 @@ COPY    panel/requirements.txt /opt/app/requirements.txt
 COPY    panel/panel_plot_utils.py /opt/app/panel_plot_utils.py
 COPY    panel/ms_io_utils.py /opt/app/ms_io_utils.py
 COPY    workflow/topdown_local.nf /opt/app/wf/topdown_local.nf
-COPY    config/nf.config /opt/app/wf/nf.config
+COPY    config/nf.config /opt/app/conf/nf.config
+COPY    config/nf_lsf.config /opt/app/conf/nf_lsf.config
+COPY    config/cluster_BPA.yml /opt/app/conf/cluster_BPA.yml
 COPY    config/common_mods_OxMethPhos.txt /opt/app/modconf/common_mods_OxMethPhos.txt
 COPY    config/common_mods_OxMethAcetPhos.txt /opt/app/modconf/common_mods_OxMethAcetPhos.txt
 COPY    config/common_mods_OxMethAcet.txt /opt/app/modconf/common_mods_OxMethAcet.txt
 COPY    config/common_mods_OxMeth.txt /opt/app/modconf/common_mods_OxMeth.txt
 COPY    config/common_mods_Ox.txt /opt/app/modconf/common_mods_Ox.txt
 COPY    config/common_mods_Meth.txt /opt/app/modconf/common_mods_Meth.txt
-COPY    mzTab/export_mztab.py /opt/app/export_mztab.py
 
 #===
 #%post
