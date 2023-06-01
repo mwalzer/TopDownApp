@@ -1,0 +1,43 @@
+FROM	python:3.10-slim-buster
+# includecmd: yes
+
+
+#===
+#%environment
+#===
+ENV	DEBIAN_FRONTEND noninteractive 
+ENV	LANG C.UTF-8
+ENV	LC_ALL C.UTF-8
+
+RUN	export PATH=/usr/local/bin/:${PATH}
+ 
+#===
+#%post
+#===
+RUN	echo "deb http://http.debian.net/debian buster main" > /etc/apt/sources.list.d/debian-unstable.list
+RUN	apt update
+RUN	apt install -q --assume-yes git vim 
+ARG	TRFP_url=https://github.com/compomics/ThermoRawFileParser/releases/download/v1.4.2/ThermoRawFileParser1.4.2.zip
+	
+#---
+# install dependencies
+#---
+RUN	apt update
+RUN	apt install -q --assume-yes wget unzip 
+RUN	apt install -q --assume-yes mono-complete
+	
+#---
+# TRFP
+#--
+RUN	cd /tmp/
+ARG	TRFP_d=/opt/trfp
+ARG	TEMP_tmp=$(mktemp) 
+RUN echo $TEMP_tmp 
+RUN echo $TRFP_url
+RUN	wget -O $TEMP_tmp $TRFP_url 
+RUN	unzip -d $TRFP_d $TEMP_tmp
+RUN	rm -f $TEMP_tmp 
+		
+RUN	echo \#\!/bin/bash > /usr/local/bin/ThermoRawFileParser.sh
+RUN	echo mono $TRFP_d/ThermoRawFileParser.exe >> /usr/local/bin/ThermoRawFileParser.sh \"\$\@\"
+RUN	chmod ugo+rx /usr/local/bin/ThermoRawFileParser.sh

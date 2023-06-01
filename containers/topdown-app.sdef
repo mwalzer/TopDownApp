@@ -1,12 +1,14 @@
 Bootstrap: localimage
 From: topdown-tools:may23.simg
+# Bootstrap: docker
+# From: python:3.10-slim-buster
 
 includecmd: yes
 
 #===
 %runscript
 #===
-    panel serve /opt/app/topdownvisapp.py
+	panel serve /opt/app/topdownvisapp.py
 
 #===
 %files 
@@ -46,28 +48,7 @@ includecmd: yes
 #---
 	pip install "nextflow<23"
 	nextflow info
-	pip install numpy pandas tables scipy panel holoviews alphapept
-
-#---
-# TRFP
-#--
-	TRFP_url=https://github.com/compomics/ThermoRawFileParser/releases/download/v1.4.2/ThermoRawFileParser1.4.2.zip
-
-	apt update
-	apt install -q --assume-yes wget unzip 
-	apt install -q --assume-yes mono-complete
-	
-	cd /tmp/
-	TRFP_d=/opt/trfp
-	TEMP_tmp=$(mktemp) 
-	wget -O $TEMP_tmp $TRFP_url &&
-		unzip -d $TRFP_d $TEMP_tmp &&
-		rm -f $TEMP_tmp 
-		
-	echo \#\!/bin/bash > /usr/local/bin/ThermoRawFileParser.sh
-	echo mono $TRFP_d/ThermoRawFileParser.exe >> /usr/local/bin/ThermoRawFileParser.sh \"\$\@\"
-	chmod ugo+rx /usr/local/bin/ThermoRawFileParser.sh
-
+	pip install panel holoviews alphapept
 
 #---
 # inception

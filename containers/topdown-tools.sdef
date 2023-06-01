@@ -6,7 +6,7 @@ includecmd: yes
 #===
 %environment
 #===
-    export PATH="/opt/thirdparty/LuciPHOr2:/thirdparty/MSGFPlus:/opt/thirdparty/Sirius:/opt/thirdparty/ThermoRawFileParser:/opt/thirdparty/Comet:/opt/thirdparty/Fido:/opt/thirdparty/MaRaCluster:/opt/thirdparty/MyriMatch:/opt/thirdparty/OMSSA:/opt/thirdparty/Percolator:/opt/thirdparty/SpectraST:/opt/thirdparty/XTandem:/opt/thirdparty/crux:${PATH}"
+	export PATH="/opt/thirdparty/LuciPHOr2:/thirdparty/MSGFPlus:/opt/thirdparty/Sirius:/opt/thirdparty/ThermoRawFileParser:/opt/thirdparty/Comet:/opt/thirdparty/Fido:/opt/thirdparty/MaRaCluster:/opt/thirdparty/MyriMatch:/opt/thirdparty/OMSSA:/opt/thirdparty/Percolator:/opt/thirdparty/SpectraST:/opt/thirdparty/XTandem:/opt/thirdparty/crux:${PATH}"
 	export PATH=/opt/flashdeconv/bin/:${PATH}
 	export LD_LIBRARY_PATH=/opt/flashdeconv/lib/:${LD_LIBRARY_PATH}
 	export OPENMS_DATA_PATH=/OpenMS/share/OpenMS
@@ -20,7 +20,7 @@ includecmd: yes
 #===
 %post
 #===
-FD_url=https://abibuilder.informatik.uni-tuebingen.de/archive/openms/OpenMSInstaller/experimental/feature/FLASHDeconv/OpenMS-2.7.0-src.tar.gz
+	FD_url=https://abibuilder.informatik.uni-tuebingen.de/archive/openms/OpenMSInstaller/experimental/feature/FLASHDeconv/OpenMS-2.7.0-src.tar.gz
 	#	FD_url=https://abibuilder.informatik.uni-tuebingen.de/archive/openms/OpenMSInstaller/experimental/feature/FLASHDeconv/OpenMS-3.0.0-src.tar.gz  # this one doesn't build
 	TP_url=https://github.com/toppic-suite/toppic-suite/archive/refs/tags/v1.5.3.zip
 	
@@ -37,8 +37,8 @@ FD_url=https://abibuilder.informatik.uni-tuebingen.de/archive/openms/OpenMSInsta
 	#apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 8D69674688B6CB36
 	#E: gnupg, gnupg2 and gnupg1 do not seem to be installed, but one of them is required for this operation
 
-	sed -i 's|http|https|g' /etc/apt/sources.list
-	cat /etc/apt/sources.list
+	#sed -i 's|http|https|g' /etc/apt/sources.list
+	#cat /etc/apt/sources.list
 
 	apt update
 	apt install -q --assume-yes wget unzip 
@@ -54,13 +54,7 @@ FD_url=https://abibuilder.informatik.uni-tuebingen.de/archive/openms/OpenMSInsta
                         libbz2-dev seqan-dev coinor-libcoinmp-dev libhdf5-dev
 	apt install -q --assume-yes wget default-jre
 	pip install --upgrade pip
-	
-#---
-# panel and nextflow
-#---
-	pip install nextflow
-	nextflow info
-	pip install numpy pandas scipy panel holoviews alphapept
+	pip install numpy pandas tables scipy pyteomics
 
 #---
 # cmake
