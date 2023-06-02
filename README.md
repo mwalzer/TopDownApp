@@ -1,5 +1,7 @@
 [![Docker Repository on Quay](https://img.shields.io/badge/container-ready-brightgreen.svg?style=for-the-badge&logo=appveyor "Docker Repository on Quay")](https://quay.io/repository/mwalzer/topdownapp?tab=tags)
 
+
+
 # TopDownApp
 This repository contains the resources and documentation to develop and build the TopDownApp.
 The different components of the app can be found in the respective subfolders.
@@ -52,3 +54,7 @@ See [that folder's README](mzTab/README.md).
 The TopDownApp uses panel to build the browser interface for the app. 
 This is also where the core of the TopDownApp lives. 
 See [that folder's README](panel/README.md). 
+
+## Notebooks
+This folder contains notebooks illustrating TopDownApp re-use/development and (user-submitted) use-case studies.
+See [that folder's README](notebooks/README.md). 
