@@ -41,3 +41,4 @@ RUN	rm -f $TEMP_tmp
 RUN	echo \#\!/bin/bash > /usr/local/bin/ThermoRawFileParser.sh
 RUN	echo mono $TRFP_d/ThermoRawFileParser.exe >> /usr/local/bin/ThermoRawFileParser.sh \"\$\@\"
 RUN	chmod ugo+rx /usr/local/bin/ThermoRawFileParser.sh
+WORKDIR /opt/

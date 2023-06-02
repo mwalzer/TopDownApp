@@ -18,14 +18,15 @@ includecmd: yes
 	../panel/panel_plot_utils.py /opt/app/panel_plot_utils.py
 	../panel/ms_io_utils.py /opt/app/ms_io_utils.py
 	../workflow/topdown_local.nf /opt/app/wf/topdown_local.nf
-	../workflow/nf.config /opt/app/wf/nf.config
+	../config/nf.config /opt/app/conf/nf.config
+	../config/nf_lsf.config /opt/app/conf/nf_lsf.config
+	../config/cluster_BPA.yml /opt/app/conf/cluster_BPA.yml
 	../config/common_mods_OxMethPhos.txt /opt/app/modconf/common_mods_OxMethPhos.txt
 	../config/common_mods_OxMethAcetPhos.txt /opt/app/modconf/common_mods_OxMethAcetPhos.txt
 	../config/common_mods_OxMethAcet.txt /opt/app/modconf/common_mods_OxMethAcet.txt
 	../config/common_mods_OxMeth.txt /opt/app/modconf/common_mods_OxMeth.txt
 	../config/common_mods_Ox.txt /opt/app/modconf/common_mods_Ox.txt
 	../config/common_mods_Meth.txt /opt/app/modconf/common_mods_Meth.txt
-	../mzTab/export_mztab.py /opt/app/export_mztab.py
 
 #===
 %environment
@@ -48,7 +49,7 @@ includecmd: yes
 #---
 	pip install "nextflow<23"
 	nextflow info
-	pip install panel holoviews alphapept
+	pip install -r /opt/app/requirements.txt
 
 #---
 # inception

@@ -1,0 +1,7 @@
+allinone:
+  container: "/hps/nobackup/juan/pride/topdown/topdown-main:dev.simg"
+  memory: 8
+  maxRetries: 3
+fasta_file: "/hps/nobackup/juan/pride/topdown/BPA-reident/uniprot-sprot_9606-2023.04.24.fasta"
+mods_file: "/hps/nobackup/juan/pride/topdown/BPA-reident/common_mods_OxMeth.txt"
+outdir: "/hps/nobackup/juan/pride/topdown/PXD026123_uniprot-sprot_9606_OxMeth"
