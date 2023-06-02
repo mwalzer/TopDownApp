@@ -17,7 +17,7 @@ Running any automated workflow on HPC infrastructure will require specialised co
 nextflow run 'workflow/cluster/topdown_cluster_noconversion_FD+PIC.nf' -c 'config/nf_lsf.config' -params-file 'config/cluster_BPA.yml' --mzML_file $FILE --outdir $ODIR
 ```
 
-### Run with a newly developed workflow
+#### Run with a newly developed workflow
 Adding a new tool usually starts with creating a tool container, and then adding a process using this tool to the nextflow at the adequate position. The process can be instructed to use the new container either directly in the nextflow or via a `params-file`.
 ```
 nextflow run workflow/local/topdown_local_MSpathfinderT.nf -params-file config/mspt.yml -c config/nf.config --raw_file /home/data/st_1.raw --fasta_file /home/data/tutorial_uniprot-st.fasta
