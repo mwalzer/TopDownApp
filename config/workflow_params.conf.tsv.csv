@@ -1,0 +1,5 @@
+Name	Value	Description
+PrSM level FDR/E-value	0.01	
+PrSM level cutoff type	FDR	Either EVALUE or FDR 
+Proteoform level FDR/E-value	0.01	
+Proteoform level cutoff type	FDR	Either EVALUE or FDR 
