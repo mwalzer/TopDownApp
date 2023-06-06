@@ -1,0 +1,6 @@
+allinone:
+  container: "/home/walzer/ms-tools/TopDown/TopDownApp/containers/topdown-app:may23.simg"
+  memory: 8
+  maxRetries: 3
+MSpathfinderT: 
+  container: "/home/walzer/ms-tools/TopDown/TopDownApp/containers/informed_proteomics.simg"
