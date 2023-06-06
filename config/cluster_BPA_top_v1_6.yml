@@ -3,7 +3,7 @@ allinone:
   memory: 8
   maxRetries: 3
 top_v_1_6:
-  container: "/hps/nobackup/juan/pride/topdown/topdown-tools-toppic_1.6.1.simg"
+  container: "/hps/nobackup/juan/pride/topdown/toppic_1.6.1.simg"
   memory: 8
   maxRetries: 3 
 fasta_file: "/hps/nobackup/juan/pride/topdown/cluster_BPA_full/uniprot-sprot_trembl_includeIsoform_9606-2023.06.06.fasta"

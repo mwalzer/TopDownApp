@@ -6,7 +6,7 @@ includecmd: yes
 #===
 %environment
 #===
-	export PATH=/opt/toppic/toppic/usr/bin/:${PATH}
+	export PATH=/opt/toppic/root/toppic/usr/bin/:${PATH}
 
 #===
 %post
