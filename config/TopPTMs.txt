@@ -1,0 +1,18 @@
+ # Ordinary Stuff
+Deamidation,0.984016,NQ,any,7
+Acetyl,42.010565,KR,any,1
+Oxidation,15.994915,M,any,35
+Disulfide,-2.015650,C,any,2020
+CationNa,21.981943,DE,any,30
+CationK,37.955882,DE,any,530
+Dehydrated,-18.010565,NQ,any,23
+
+# Interesting Stuff
+AlaGly,-14.015650,A,any,544
+Methyl,14.015650,K,any,34
+Phospho,79.966331,STY,any,21
+Hex,162.052824,NSTY,any,41
+HexNAc,203.079373,NSTC,any,43
+NeuAc,291.095417,NST,any,1303
+
+

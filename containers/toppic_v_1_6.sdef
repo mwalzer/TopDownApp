@@ -1,0 +1,63 @@
+Bootstrap: docker
+From: python:3.10-slim-buster
+
+includecmd: yes
+
+#===
+%environment
+#===
+	export PATH=/opt/toppic/toppic/usr/bin/:${PATH}
+
+#===
+%post
+#===
+	TP_url=https://github.com/toppic-suite/toppic-suite/archive/refs/tags/v1.6.1.zip
+
+#---
+# install dependencies
+#---
+	apt update
+	apt install -q --assume-yes wget unzip 
+	apt install -q --assume-yes build-essential catch autoconf patch libtool git automake vim
+	apt install -q --assume-yes zlib1g-dev libxerces-c-dev libboost-filesystem-dev \
+						libboost-program-options-dev libboost-system-dev libboost-thread-dev \
+						libboost-iostreams-dev libboost-chrono-dev libeigen3-dev \
+						nlohmann-json3-dev qtbase5-dev openssl libssl-dev
+	apt install -q --assume-yes libqt5svg5-dev libqt5opengl5-dev\
+						libeigen3-dev libsqlite3-dev libwildmagic-dev libboost-random-dev \
+                        libboost-regex-dev libboost-iostreams-dev libboost-date-time-dev \
+                        libboost-math-dev libxerces-c-dev libglpk-dev zlib1g-dev libsvm-dev \
+                        libbz2-dev seqan-dev coinor-libcoinmp-dev libhdf5-dev
+	apt install -q --assume-yes wget default-jre
+	pip install --upgrade pip
+	pip install numpy pandas tables scipy pyteomics
+
+#---
+# cmake
+#---
+	wget https://www.cmake.org/files/v3.25/cmake-3.25.2.tar.gz
+	tar xf cmake-3.25.2.tar.gz
+	cd cmake-3.25.2
+	./bootstrap
+	make
+	make install
+	cmake --version
+	
+#---
+# TopPic
+#--
+	# get src
+	cd /tmp/
+	TEMP_TP=$(mktemp) 
+	wget -O $TEMP_TP $TP_url &&
+		unzip -d /opt/toppic_src $TEMP_TP &&
+		rm -f $TEMP_TP 
+
+	# build TopPic
+	cd /opt/toppic_src/ &&
+		cd $(ls -d */|head -n 1) &&
+		mkdir build &&
+		cd build &&
+		cmake .. &&
+		make -j$(nproc) &&
+		make install DESTDIR=/opt/toppic
